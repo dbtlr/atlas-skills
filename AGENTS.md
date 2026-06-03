@@ -33,9 +33,11 @@ bound to a Workspace.
 ## Editing skills
 
 Skills live in `skills/` — a single real directory, no symlink, no split. Both
-harnesses load from there: Claude Code from the plugin root's `skills/`, and
-Codex when launched in this directory. The four skills: `session-start`, `init`,
-`session-log`, `consolidate`.
+harnesses load from there: Claude Code via `.claude-plugin/plugin.json` (it
+auto-discovers the plugin root's `skills/`), and Codex via
+`.codex-plugin/plugin.json` (its `"skills": "./skills/"` pointer) when launched
+in this directory. The four skills: `session-start`, `init`, `session-log`,
+`consolidate`.
 
 ## Validating the plugin
 

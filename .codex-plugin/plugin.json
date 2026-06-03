@@ -1,0 +1,35 @@
+{
+  "name": "saga",
+  "version": "0.1.0",
+  "description": "Workflow orchestrator for agentic coding sessions — weaves the knowledge tool (Norn) and the work tool (Mimir) into one coherent session, end to end.",
+  "author": {
+    "name": "Drew Butler",
+    "email": "drew@dbtlr.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "orchestration",
+    "sessions",
+    "skills",
+    "knowledge",
+    "agentic"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Saga",
+    "shortDescription": "Weaves knowledge and work into one coherent agentic coding session",
+    "longDescription": "Saga runs a coherent working Session: it assembles a Session Primer at start, routes the work, memorializes a Session Log at work boundaries, and consolidates durable knowledge — threading the knowledge (Norn) and work (Mimir) tools into and out of the session.",
+    "developerName": "Drew Butler",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Start my session.",
+      "Let's pick up where we left off."
+    ]
+  }
+}

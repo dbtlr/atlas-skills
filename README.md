@@ -42,6 +42,10 @@ Once installed, a primary session starts with:
 /saga:session-start
 ```
 
+**Codex** discovers the same skills via `.codex-plugin/plugin.json` (its
+`"skills": "./skills/"` pointer) when launched in this directory — no separate
+install step.
+
 ## How it fits together
 
 A **Session** is bounded by a body of work, not by a single context window. `session-start` builds the Session Primer that re-loads on each resumption, keeping the through-line across compactions and new windows. At a work boundary, `session-log` freezes what happened; `consolidate` later lifts the durable parts into maintained context. `init` keeps the underlying Workspace well-formed.
@@ -52,7 +56,8 @@ A **Session** is bounded by a body of work, not by a single context window. `ses
 - `scripts/build_primer.py` — resolves Project Binding → Vault Registry → vault root and merges the Active Context.
 - `resources/`, `templates/` — shared skill resources and document templates.
 - `tests/` — primer-merge tests.
-- `.claude-plugin/` — plugin manifest and the local `saga-dev` marketplace.
+- `.claude-plugin/` — Claude Code plugin manifest and the local `saga-dev` marketplace.
+- `.codex-plugin/` — Codex plugin declaration (`plugin.json`), pointing at `skills/`.
 
 ## License
 
