@@ -1,9 +1,9 @@
 ---
-name: session-log
+name: write-session-log
 description: Write the merged Session Log that memorializes a Session — what happened, decisions, deviations, and Consolidation Candidates. Trigger at a work boundary — a task/feature/investigation finished, a wrap-up signal, context nearing compaction, or an explicit request. Primary agent only.
 ---
 
-# Saga: session-log
+# Saga: write-session-log
 
 Memorialize the current **Session** as one frozen record, centered on **Consolidation Candidates**. This merges what a dev-log and a partner-log captured separately today (ADR 0004).
 
@@ -19,7 +19,7 @@ At a work boundary — don't wait to be asked:
 
 ## Where it goes
 
-Resolve the vault root from the Project Binding + Vault Registry (or reuse what `session-start` loaded). Write to:
+Resolve the vault root from the Project Binding + Vault Registry (or reuse what `start-session` loaded). Write to:
 ```
 <vault_root>/<artifacts_dir>/session-logs/<YYYY-MM-DD-HHMM>-<slug>.md
 ```
@@ -37,4 +37,4 @@ The heart is **Consolidation Candidates** — *"what happened that, had I known 
 ## After writing
 
 - Update the Workspace Brief's session-state sections (Current State, What's Next, Open Questions, Learnings, Recent Sessions) — **below the rule only**; never touch the durable manifest above it.
-- The Session Log is frozen; durable truth is lifted out of it later by **consolidate**.
+- The Session Log is frozen; durable truth is lifted out of it later by **consolidate-sessions**.

@@ -19,8 +19,8 @@ Guidance Session Start teaches the agent so it keeps the vault high-signal and d
 
 ## Closing out a session
 
-- Trigger `session-log` at a work boundary: a task/feature/investigation finished, a wrap-up signal, or context nearing compaction (write *before* the threshold).
-- The Session Log surfaces Consolidation Candidates; `consolidate` later lifts them into maintained context.
+- Trigger `write-session-log` at a work boundary: a task/feature/investigation finished, a wrap-up signal, or context nearing compaction (write *before* the threshold).
+- The Session Log surfaces Consolidation Candidates; `consolidate-sessions` later lifts them into maintained context.
 
 ## Subagents
 

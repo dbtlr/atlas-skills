@@ -33,7 +33,7 @@ bound to a Workspace.
 ## Editing skills
 
 Skills live in `skills/` — a single real directory, no symlink, no split. The
-four: `session-start`, `init`, `session-log`, `consolidate`. They're discovered
+four: `start-session`, `initialize-saga`, `write-session-log`, `consolidate-sessions`. They're discovered
 by Claude Code (via `.claude-plugin/plugin.json`, auto-discovering the plugin
 root's `skills/`), by Codex (via `.codex-plugin/plugin.json` + `marketplace.json`
 when installed from GitHub — Codex copies the plugin into its own cache, it does

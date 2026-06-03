@@ -18,12 +18,15 @@ The test each tool must pass is to state its purpose without "and": *Norn keeps 
 
 ## The four skills
 
+Skill names are prefixed/descriptive so they stay unambiguous when installed
+standalone (the Claude Code plugin also namespaces them as `saga:<name>`).
+
 | Skill | What it does |
 | --- | --- |
-| `session-start` | Saga's entry point. Assembles the **Session Primer** (User Profile + Shared Memory + Workspace Brief) and routes the work. |
-| `init` | Binds a project to a vault Workspace and scaffolds or self-heals it. |
-| `session-log` | At a work boundary, writes the merged **Session Log** memorializing what happened — decisions, deviations, and Consolidation Candidates. |
-| `consolidate` | Lifts Consolidation Candidates out of frozen Session Logs into maintained context — durable knowledge to the workspace, follow-ups to tasks, user observations to the partner-model log. |
+| `start-session` | Saga's entry point. Assembles the **Session Primer** (User Profile + Shared Memory + Workspace Brief) and routes the work. |
+| `initialize-saga` | Binds a project to a vault Workspace and scaffolds or self-heals it. |
+| `write-session-log` | At a work boundary, writes the merged **Session Log** memorializing what happened — decisions, deviations, and Consolidation Candidates. |
+| `consolidate-sessions` | Lifts Consolidation Candidates out of frozen Session Logs into maintained context — durable knowledge to the workspace, follow-ups to tasks, user observations to the partner-model log. |
 
 ## Install
 
@@ -39,7 +42,7 @@ Because the marketplace `source` is the repo directory itself, the installed plu
 Once installed, a primary session starts with:
 
 ```
-/saga:session-start
+/saga:start-session
 ```
 
 ### Codex (and other agents)
@@ -61,11 +64,11 @@ and `.codex-plugin/plugin.json` for that (App path not verified headlessly).
 
 ## How it fits together
 
-A **Session** is bounded by a body of work, not by a single context window. `session-start` builds the Session Primer that re-loads on each resumption, keeping the through-line across compactions and new windows. At a work boundary, `session-log` freezes what happened; `consolidate` later lifts the durable parts into maintained context. `init` keeps the underlying Workspace well-formed.
+A **Session** is bounded by a body of work, not by a single context window. `start-session` builds the Session Primer that re-loads on each resumption, keeping the through-line across compactions and new windows. At a work boundary, `write-session-log` freezes what happened; `consolidate-sessions` later lifts the durable parts into maintained context. `initialize-saga` keeps the underlying Workspace well-formed.
 
 ## Repository layout
 
-- `skills/` — the four skill sources (`session-start`, `init`, `session-log`, `consolidate`), discovered by both harnesses and the cross-harness `skills` CLI.
+- `skills/` — the four skill sources (`start-session`, `initialize-saga`, `write-session-log`, `consolidate-sessions`), discovered by both harnesses and the cross-harness `skills` CLI.
 - `scripts/build_primer.py` — resolves Project Binding → Vault Registry → vault root and merges the Active Context.
 - `resources/`, `templates/` — shared skill resources and document templates.
 - `tests/` — primer-merge tests.

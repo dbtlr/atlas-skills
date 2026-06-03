@@ -1,10 +1,10 @@
 ---
-name: init
-description: Bind this project to a vault Workspace and scaffold or self-heal it. Use when setting up Saga in a repo, when the user says "initialize my workspace" or "/saga:init", or when session-start reports no Project Binding (.saga.toml).
+name: initialize-saga
+description: Bind this project to a vault Workspace and scaffold or self-heal it. Use when setting up Saga in a repo, when the user says "initialize my workspace" or "/saga:initialize-saga", or when start-session reports no Project Binding (.saga.toml).
 argument-hint: "[workspace] [--vault <name>]"
 ---
 
-# Saga: init
+# Saga: initialize-saga
 
 Bind a project to its vault **Workspace** and ensure that workspace is scaffolded correctly. Idempotent and self-healing — safe to run repeatedly.
 
@@ -80,9 +80,9 @@ Ask whether to commit it to git (**default: no** — ensure it's in `.gitignore`
 
 ## 7. Permissions (harness-specific)
 
-Ensure the agent can read/write the vault paths. In Claude Code, add the vault globs to `.claude/settings.local.json`. Re-running `init` under a different harness adds that harness's needs.
+Ensure the agent can read/write the vault paths. In Claude Code, add the vault globs to `.claude/settings.local.json`. Re-running `initialize-saga` under a different harness adds that harness's needs.
 
 ## 8. Finish
 
-- **Fresh init:** hand off to **session-start** to load the new context.
+- **Fresh init:** hand off to **start-session** to load the new context.
 - **Heal:** just report what changed.

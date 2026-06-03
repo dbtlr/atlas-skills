@@ -1,9 +1,9 @@
 ---
-name: consolidate
+name: consolidate-sessions
 description: Lift Consolidation Candidates out of frozen Session Logs into maintained context — durable knowledge to the workspace, follow-ups to tasks/, user observations to the partner-model log. Run periodically or when Session Logs have accumulated. Primary agent only.
 ---
 
-# Saga: consolidate
+# Saga: consolidate-sessions
 
 Inspect the record of work and lift durable truth out of it into maintained context. Phase 1 is a shallow stand-in (ADR 0006): it routes candidates directly into the vault; the Norn/Mimir fan-out is deferred.
 
@@ -38,4 +38,4 @@ Update the state file's `last_run` to now (accurate timestamp). Briefly report w
 
 ## Notes
 
-Phase 1 routes are deliberately shallow **[seams]**: Norn will later own knowledge writes, Mimir will own follow-up work, and `consolidate` will own `user.md` regeneration (retiring the jsonl shim). Keep the routing in one place so the targets can swap cleanly.
+Phase 1 routes are deliberately shallow **[seams]**: Norn will later own knowledge writes, Mimir will own follow-up work, and `consolidate-sessions` will own `user.md` regeneration (retiring the jsonl shim). Keep the routing in one place so the targets can swap cleanly.

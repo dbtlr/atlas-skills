@@ -6,7 +6,7 @@ Resolves the Project Binding (`.saga.toml`) through the Vault Registry
 (`user.md`), Shared Memory (`memory.md`), and the Workspace Brief — into a
 single payload printed to stdout.
 
-Harness-agnostic: invoked by the `session-start` skill in Phase 1, and by a
+Harness-agnostic: invoked by the `start-session` skill in Phase 1, and by a
 SessionStart hook later (see decisions/0005, 0011). Phase 1 reads the vault
 directly; Mimir folding is a marked seam.
 
@@ -67,7 +67,7 @@ def main(argv: list[str]) -> int:
 
     binding_path = find_binding(cwd)
     if binding_path is None:
-        # Not initialized — session-start quietly stops.
+        # Not initialized — start-session quietly stops.
         print(f"SAGA_UNINITIALIZED: no {BINDING_FILENAME} found from {cwd}")
         return 0
 
