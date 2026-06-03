@@ -1,6 +1,6 @@
 ---
 name: session-log
-description: Write the merged Session Log that memorializes a Session — what happened, decisions, deviations, and Consolidation Candidates. Trigger at a work boundary: a task/feature/investigation finished, a wrap-up signal, context nearing compaction, or an explicit request. Primary agent only.
+description: Write the merged Session Log that memorializes a Session — what happened, decisions, deviations, and Consolidation Candidates. Trigger at a work boundary — a task/feature/investigation finished, a wrap-up signal, context nearing compaction, or an explicit request. Primary agent only.
 ---
 
 # Saga: session-log
