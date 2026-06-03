@@ -40,12 +40,6 @@ when installed from GitHub — Codex copies the plugin into its own cache, it do
 NOT read skills from the working directory), and by the cross-harness `skills`
 CLI (`npx skills add dbtlr/saga`), which symlinks them into `~/.agents/skills/`.
 
-**Skill `SKILL.md` frontmatter must be valid YAML** — descriptions with a
-colon-space (`foo: bar`) parse as a nested mapping and get silently dropped by
-strict parsers (Codex, the `skills` CLI). Use an em-dash or quote the value.
-Claude Code's loader is lenient and won't catch it; neither does
-`plugin-validator`. Verify with `python3 -c "import yaml; ..."` if unsure.
-
 ## Validating the plugin
 
 Run the `plugin-dev:plugin-validator` agent against the repo root after changing
