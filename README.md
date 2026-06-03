@@ -48,7 +48,7 @@ A **Session** is bounded by a body of work, not by a single context window. `ses
 
 ## Repository layout
 
-- `.agents/skills/` — canonical skill sources (`session-start`, `init`, `session-log`, `consolidate`), exposed to Claude Code via the `skills/` symlink.
+- `.agents/skills/` — canonical skill sources (`session-start`, `init`, `session-log`, `consolidate`). Codex loads skills from here; Claude Code loads them from the plugin root's `skills/`, which is a symlink → `.agents/skills/`.
 - `scripts/build_primer.py` — resolves Project Binding → Vault Registry → vault root and merges the Active Context.
 - `resources/`, `templates/` — shared skill resources and document templates.
 - `tests/` — primer-merge tests.
