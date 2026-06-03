@@ -42,37 +42,22 @@ Once installed, a primary session starts with:
 /saga:session-start
 ```
 
-### Codex
+### Codex (and other agents)
 
-Codex installs Saga from GitHub (it copies the plugin into its own cache — it
-does **not** read skills from the working directory). The repo ships a
-`marketplace.json` (github self-reference) and a `.codex-plugin/plugin.json`
-declaration. Register and install:
-
-```bash
-git clone git@github.com:dbtlr/saga.git ~/.codex/plugins/saga
-mkdir -p ~/.agents/plugins
-cat > ~/.agents/plugins/marketplace.json <<'EOF'
-{
-  "name": "saga",
-  "interface": { "displayName": "Saga" },
-  "plugins": [{
-    "name": "saga",
-    "source": { "source": "local", "path": "../../.codex/plugins/saga" },
-    "policy": { "installation": "AVAILABLE" },
-    "category": "Coding"
-  }]
-}
-EOF
-```
-
-Then restart Codex and enable **Saga** from Plugins. Skills are also installable
-standalone across any agent (Codex, Cursor, Gemini, …) via the cross-harness
-`skills` CLI, which symlinks them into `~/.agents/skills/`:
+The verified install path is the cross-harness **`skills` CLI**, which fetches
+from GitHub and installs into `~/.agents/skills/` — read by Codex, Cursor,
+Gemini CLI, opencode, and others:
 
 ```bash
 npx skills add dbtlr/saga --skill '*'
 ```
+
+This is confirmed working: all four skills load in Codex. Codex does **not**
+read skills from the working directory, and its native `plugin marketplace add`
+flow expects plugins nested under `plugins/<name>/` (Saga is a root plugin), so
+the `skills` CLI is the supported route. Codex **App** users can also add Saga
+via the Plugins UI — the repo ships `marketplace.json` (github self-reference)
+and `.codex-plugin/plugin.json` for that (App path not verified headlessly).
 
 ## How it fits together
 
