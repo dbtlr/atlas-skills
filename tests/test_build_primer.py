@@ -1,4 +1,4 @@
-"""Hermetic tests for scripts/build_primer.py.
+"""Hermetic tests for skills/start-session/build_primer.py.
 
 No external deps (stdlib unittest). Each test builds a throwaway vault +
 registry under a temp dir and points the script at it via XDG_CONFIG_HOME and
@@ -15,8 +15,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-SCRIPTS = Path(__file__).resolve().parent.parent / "scripts"
-sys.path.insert(0, str(SCRIPTS))
+SKILL_DIR = Path(__file__).resolve().parent.parent / "skills" / "start-session"
+sys.path.insert(0, str(SKILL_DIR))
 import build_primer  # noqa: E402
 
 

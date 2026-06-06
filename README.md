@@ -70,7 +70,7 @@ A **Session** is bounded by a body of work, not by a single context window. `sta
 ## Repository layout
 
 - `skills/` — the five skill sources (`start-session`, `initialize-saga`, `grill-me`, `write-session-log`, `consolidate-sessions`), discovered by both harnesses and the cross-harness `skills` CLI.
-- `scripts/build_primer.py` — resolves Project Binding → Vault Registry → vault root and merges the Active Context.
+- `skills/start-session/build_primer.py` — resolves Project Binding → Vault Registry → vault root and merges the Active Context. Ships **inside** the skill so it travels in every install model (plugin or bare `npx skills add`).
 - `resources/`, `templates/` — shared skill resources and document templates.
 - `tests/` — primer-merge tests.
 - `.claude-plugin/` — Claude Code plugin manifest and the local `saga-dev` marketplace.

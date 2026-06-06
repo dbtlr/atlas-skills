@@ -23,7 +23,7 @@ Mimir=work, Saga=orchestration). See [README.md](README.md) for the full picture
 ## Running the primer
 
 ```bash
-python3 scripts/build_primer.py
+python3 skills/start-session/build_primer.py
 ```
 
 Resolves Project Binding (`.saga.toml`) → Vault Registry → vault root and prints

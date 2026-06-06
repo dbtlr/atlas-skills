@@ -28,12 +28,13 @@ Building the Session Primer first is not optional. The one exception is the quie
 
 ## 1. Build the Session Primer
 
-Run the primer-merge script from the repo root:
+Run the primer-merge script that ships **inside this skill** — the path resolves whether Saga is installed as a plugin (`${CLAUDE_PLUGIN_ROOT}`), as a bare skill (`~/.agents/skills/`), or run in-repo:
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/build_primer.py"
+python3 "$(ls "${CLAUDE_PLUGIN_ROOT}/skills/start-session/build_primer.py" \
+              "$HOME/.agents/skills/start-session/build_primer.py" \
+              "skills/start-session/build_primer.py" 2>/dev/null | head -n1)"
 ```
-(When developing in-repo: `python3 scripts/build_primer.py`.)
 
 - If it prints `SAGA_UNINITIALIZED: …`, this project has no Project Binding (`.saga.toml`) — it isn't a Saga workspace. **Stop silently and proceed with the user's request normally; do not mention Saga or pitch initialization.** This skill triggers on *any* session (the trigger lives in the skill, not in a per-project file), so an unbound project is the common, expected case — exit quietly. Only route to **initialize-saga** if the user is explicitly setting up Saga (e.g. "/saga:initialize-saga", "initialize my workspace", "bind this repo to a vault").
 - If it reports the vault isn't registered, run **initialize-saga** to register/repair it (self-heal).
