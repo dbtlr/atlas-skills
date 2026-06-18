@@ -46,6 +46,9 @@ Once installed, a primary session starts with:
 /saga:start-session
 ```
 
+`start-session` is also the recovery point after a context clear/reset: it
+reloads the Session Primer for the same body of work before the agent continues.
+
 ### Codex (and other agents)
 
 The verified install path is the cross-harness **`skills` CLI**, which fetches
@@ -62,6 +65,12 @@ flow expects plugins nested under `plugins/<name>/` (Saga is a root plugin), so
 the `skills` CLI is the supported route. Codex **App** users can also add Saga
 via the Plugins UI — the repo ships `marketplace.json` (github self-reference)
 and `.codex-plugin/plugin.json` for that (App path not verified headlessly).
+
+Refresh an existing global install after Saga changes with:
+
+```bash
+npx skills update start-session initialize-saga write-session-log consolidate-sessions grill-me -g -y
+```
 
 ## How it fits together
 

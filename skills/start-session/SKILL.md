@@ -1,6 +1,6 @@
 ---
 name: start-session
-description: Use at the very start of every session in a Saga workspace, before any other response or action — assembles the Session Primer (User Profile + Shared Memory + Workspace Brief) and routes the work. Invoke it proactively at the start of any session. Primary agent only — subagents never load this.
+description: Use at the very start of every primary-agent context in a Saga workspace — new session, resumed session, compaction, or clear/reset — before any other response or action. Assembles the Session Primer (User Profile + Shared Memory + Workspace Brief) and routes the work. Invoke it proactively; do not wait for the user to ask. Primary agent only — subagents never load this.
 ---
 
 # Saga: start-session
@@ -12,7 +12,7 @@ If you were dispatched as a subagent to execute a specific task, skip this skill
 </SUBAGENT-STOP>
 
 <EXTREMELY-IMPORTANT>
-If you are a primary agent and there is even a **1% chance** this is the start of a session, you ABSOLUTELY MUST run this skill before anything else — before any response, any clarifying question, any code exploration, any file read. This is not negotiable and you cannot rationalize your way out of it.
+If you are a primary agent and there is even a **1% chance** this is the start of a session, a resumed session, a post-compaction continuation, or a post-clear/reset context, you ABSOLUTELY MUST run this skill before anything else — before any response, any clarifying question, any code exploration, any file read. This is not negotiable and you cannot rationalize your way out of it.
 
 These thoughts mean STOP — you are rationalizing:
 
@@ -21,6 +21,7 @@ These thoughts mean STOP — you are rationalizing:
 | "This is just a quick question" | Questions open sessions. Build the primer first. |
 | "Let me just check the repo/files first" | The primer is the context you'd check *against*. It comes first. |
 | "I'll load context after I answer" | There is no after — starting context must be held from the first response. |
+| "The user just cleared context; this isn't a new session" | A clear/reset is a new primary-agent context. Rebuild the primer before continuing. |
 | "I'll wait until I'm told to start" | The trigger lives here, in this skill. Nothing else will tell you. Run it. |
 
 Building the Session Primer first is not optional. The one exception is the quiet exit in §1: if the primer reports the project is not a Saga workspace, stop silently and proceed normally — do not pitch initialization.
@@ -42,7 +43,7 @@ python3 "$(ls "${CLAUDE_PLUGIN_ROOT}/skills/start-session/build_primer.py" \
 
 ## 2. Hold the through-line
 
-A **Session** is bounded by a body of work, not by one context window. The primer is what you re-load on each resumption — keep the work's through-line across compactions and new windows.
+A **Session** is bounded by a body of work, not by one context window. The primer is what you re-load on each resumption — including compactions, clears/resets, and new windows — to keep the work's through-line intact.
 
 ## 3. Decisions & glossary are live
 
