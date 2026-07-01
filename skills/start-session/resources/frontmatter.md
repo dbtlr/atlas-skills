@@ -33,8 +33,12 @@ kind: null
 created: YYYY-MM-DDTHH:mm
 modified: YYYY-MM-DDTHH:mm
 workspace: <workspace-slug>
+workspace_consolidated: false   # flipped true by consolidate-workspace
+memory_consolidated: false      # flipped true by consolidate-memory
 ---
 ```
+
+`workspace_consolidated` / `memory_consolidated` are the consolidation cursor: `write-session-log` stamps both `false`; the consolidate skills scan on them (`norn find`) and flip them (`norn set`). norn's `session-log-base` rule requires their presence.
 
 ## Rules
 

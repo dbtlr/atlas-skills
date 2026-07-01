@@ -29,6 +29,8 @@ Never write a Session Log inside the workspace. Use an accurate timestamp (`date
 
 Start from `templates/session-log.md`. Fill every section; more detail is better than less — write for a future session with zero memory of today.
 
+The template stamps two consolidation-state flags — `workspace_consolidated: false` and `memory_consolidated: false`. **Leave them `false`**: they're the cursor `consolidate-workspace` / `consolidate-memory` scan on (`norn find`) and flip (`norn set`) once each has lifted this log's candidates. Don't omit them — norn's `session-log-base` rule requires their presence.
+
 The heart is **Consolidation Candidates** — *"what happened that, had I known it earlier, would have saved time?"* Tag each by the taxonomy in `references/consolidation-candidates.md`:
 - **Durable knowledge** — decisions, user-personas, user-stories
 - **Future opportunities** — tech-debt, follow-up-tasks, open-questions
