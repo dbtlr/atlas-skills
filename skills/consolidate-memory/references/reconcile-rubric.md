@@ -41,7 +41,9 @@ weight = spread × Σ decay(now − hit_date)
 ```
 
 **There is exactly one ordering: `weight`, computed by the formula above.** Rank and
-budget by that single number — do not introduce a separate lexical sort. "Spread-first"
+budget by that single number — do not introduce a separate lexical sort. (Exact-weight
+ties are broken deterministically — higher spread, then more-recent newest hit — purely
+for reproducibility; that tiebreak never overrides weight.) "Spread-first"
 is not a second rule; it is *why the formula behaves as it does*: spread is the
 **multiplier**, so a cluster seen across many workspaces dominates one piled up in a
 single workspace (that's local flavor — it belongs in *that* workspace's notes, not the
@@ -49,12 +51,14 @@ shared profile). Hit **count** and **recency** both live inside `Σ decay` — m
 add terms, older hits shrink them — so the formula already embodies "spread-first,
 recent-and-repeated next." Nothing ranks outside it.
 
-**You do not need exact floating-point sums.** Read the drivers straight off the
-evidence lines and rank relatively: **spread** (distinct workspaces — it multiplies, so
-it dominates), then the **mass of recent evidence** (how many hits, how recent). Watch
-the trap: *many* hits that are *all* old still decay toward zero — don't let a long list
-of stale evidence read as "strong." Treat the formula as the model, not an arithmetic
-chore. (For exactness, a deterministic helper is the right tool — see "Note on a helper.")
+**Don't compute this by hand — run the helper.** `weights.py` (this skill's directory)
+parses the ledger and prints each active cluster's `{spread, count, newest_date,
+weight, tier}`, ranked. Use its numbers as the authoritative ranking and tiering; your
+judgment goes into the *actions* (add/strengthen/prune/flag/re-home), not the
+arithmetic. Running it is what makes the gate *computed* rather than eyeballed. Only if
+it cannot run, fall back to reading the drivers off the evidence lines — spread (it
+multiplies, so it dominates), then the **mass of recent evidence** — and beware the
+trap that *many* all-old hits still decay toward zero.
 
 ### Tiers (recency-gated, not magic numbers)
 
@@ -192,11 +196,17 @@ No state file changes, so the report **is** the record. State, per file: bullets
 must always appear — a silent deletion of curated context is exactly the failure this
 conservative posture exists to prevent.
 
-## Note on a helper
+## The weight helper
 
-The weight model is deterministic; an LLM eyeballing decay across many dated lines is
-not. If reconcile's weighting ever proves shaky, the fix is a small stdlib helper that
-parses `observations.md` and prints per-cluster `{spread, count, newest_date, weight,
-tier}` — turning the gate from "reasoned" into "computed." Deferred for now (the
-spread + recency signals are read reliably without it); called out so the option is on
-the record. It would pair naturally with the `SKILL.md` rewrite (ATSK-16).
+`weights.py` (this skill's directory) is the **canonical** weight source — the model
+above is deterministic, and an LLM eyeballing decay across many dated lines is not:
+
+    python3 weights.py "$ATLAS_PATH/Workspaces/shared/observations.md" --format table
+
+It reads only `status: active` clusters from the `## Clusters` section (the format spec
+and its fenced example are ignored), applies the exact model above (half-life 90d,
+tiers as defined), and prints per-cluster `{heading, bucket, spread, count,
+newest_date, weight, tier}` ranked by weight (`--format json` for machine use).
+`--now YYYY-MM-DD` overrides the reference date (tests; defaults to today). It writes
+nothing — weight is derived, never stored. The `SKILL.md` orchestration (ATSK-16) runs
+it and hands the output to this reconcile step.
