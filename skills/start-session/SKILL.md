@@ -64,7 +64,8 @@ This is general practice, not gated behind any one skill.
 From the Active Context and what the user wants, route to:
 - **initialize-atlas** — bind/scaffold/heal the workspace (also when the primer reports uninitialized).
 - **write-session-log** — at a work boundary, memorialize the Session.
-- **consolidate-workspace** — lift Consolidation Candidates from Session Logs into maintained context.
+- **consolidate-workspace** — lift a workspace's durable knowledge from its Session Logs into the workspace + Mimir.
+- **consolidate-memory** — (global) regenerate the shared `user.md` / `memory.md` from user observations across all workspaces.
 
 ## 5. Keep the vault high-signal
 
