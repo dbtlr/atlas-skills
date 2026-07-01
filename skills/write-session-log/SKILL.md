@@ -36,9 +36,9 @@ The heart is **Consolidation Candidates** — *"what happened that, had I known 
 - **Future opportunities** — tech-debt, follow-up-tasks, open-questions
 - **User observations** — collaboration-patterns
 
-**Mark carried candidates.** If a candidate repeats one a prior Session Log raised that was never actioned, list it as `carried (since <YYYY-MM-DD>)` (the first-raised date, optionally a count) rather than as fresh — see *Carried candidates* in `references/consolidation-candidates.md`. This is detection only: you surface the recurrence, you don't file or decide it (that's `consolidate-sessions`' job).
+**Mark carried candidates.** If a candidate repeats one a prior Session Log raised that was never actioned, list it as `carried (since <YYYY-MM-DD>)` (the first-raised date, optionally a count) rather than as fresh — see *Carried candidates* in `references/consolidation-candidates.md`. This is detection only: you surface the recurrence, you don't file or decide it (that's `consolidate-workspace`' job).
 
 ## After writing
 
 - Update the Workspace Brief's session-state sections (Current State, What's Next, Open Questions, Learnings, Recent Sessions) — **below the rule only**; never touch the durable manifest above it.
-- The Session Log is frozen; durable truth is lifted out of it later by **consolidate-sessions**.
+- The Session Log is frozen; durable truth is lifted out of it later — durable knowledge + follow-ups by **consolidate-workspace**, user observations by **consolidate-memory**.

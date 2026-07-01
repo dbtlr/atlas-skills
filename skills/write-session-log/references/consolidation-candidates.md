@@ -7,7 +7,7 @@ A **Consolidation Candidate** is an item a Session Log flags as worth lifting ou
 A candidate is **carried** when it repeats one a prior Session Log already raised that was **never actioned** (still not filed, decided, or promoted). Mark a carried candidate `carried (since <YYYY-MM-DD>)` — first-raised date, optionally a count — instead of re-listing it as fresh. This makes recurrence legible in the candidate itself.
 
 - **write-session-log** applies the mark (detection only — it never files or decides).
-- **consolidate-sessions** acts on it: a candidate carried across **≥2 runs** is itself the signal to escalate — file it or force a decision, don't let it be carried again. (It also detects recurrence directly across the log window, so the mark is an aid, not a gate.)
+- **consolidate-workspace** acts on it: a candidate carried across **≥2 runs** is itself the signal to escalate — file it or force a decision, don't let it be carried again. (It also detects recurrence directly across the log window, so the mark is an aid, not a gate.)
 
 ## Taxonomy
 
@@ -24,12 +24,14 @@ A candidate is **carried** when it repeats one a prior Session Log already raise
 ### User observations
 - `collaboration-pattern` — something that helps future agents work better with the user
 
-## Routing (Phase 1)
+## Routing
 
-| Bucket | Routes to |
-|--------|-----------|
-| Durable knowledge | Workspace Brief / `decisions/` / `notes/` |
-| Future opportunities | a Mimir task |
-| User observations | the shared profile (`user.md` / `memory.md`) regeneration, cross-project |
+Two skills own different buckets, keyed on different session-log flags — each scans (`norn find`) and marks (`norn set`) only its own flag:
+
+| Bucket | Routes to | Skill (flag) |
+|--------|-----------|--------------|
+| Durable knowledge | Workspace Brief / `decisions/` / `notes/` | **consolidate-workspace** (`workspace_consolidated`) |
+| Future opportunities | a Mimir task | **consolidate-workspace** (`workspace_consolidated`) |
+| User observations | the shared profile (`user.md` / `memory.md`), cross-project | **consolidate-memory** (`memory_consolidated`) |
 
 The Session Log is the only consolidation source. Once consolidated it is **spent** — frozen but prunable, not a permanent archive.
