@@ -12,7 +12,7 @@ knowledge vault and by **Mimir** for work tracking.
 | `start-session` | The entry point. Assembles the **Session Primer** (User Profile + Shared Memory + Workspace Brief, plus the `mimir next` work queue when present) and routes the work. |
 | `initialize-atlas` | Binds a project to a vault Workspace and scaffolds or self-heals it. |
 | `write-session-log` | At a work boundary, writes the merged **Session Log** memorializing what happened — decisions, deviations, and Consolidation Candidates. |
-| `consolidate-sessions` | Lifts Consolidation Candidates out of frozen Session Logs into maintained context — durable knowledge to the workspace, follow-ups to Mimir, user observations to the shared profile. |
+| `consolidate-workspace` | Consolidates the bound workspace's Session Logs — lifts durable knowledge into the workspace (Brief / decisions / notes) and follow-ups into Mimir, marks each log via norn, and grooms the Brief back to small. |
 
 ## Requirements
 
@@ -33,7 +33,7 @@ npx skills add dbtlr/atlas-skills --skill '*'
 Refresh an existing install after changes:
 
 ```bash
-npx skills update start-session initialize-atlas write-session-log consolidate-sessions -g -y
+npx skills update start-session initialize-atlas write-session-log consolidate-workspace -g -y
 ```
 
 Once installed, a primary session starts with:
@@ -50,7 +50,7 @@ reloads the Session Primer for the same body of work before the agent continues.
 A **Session** is bounded by a body of work, not by a single context window.
 `start-session` builds the Session Primer that re-loads on each resumption,
 keeping the through-line across compactions and new windows. At a work boundary,
-`write-session-log` freezes what happened; `consolidate-sessions` later lifts the
+`write-session-log` freezes what happened; `consolidate-workspace` later lifts the
 durable parts into maintained context. `initialize-atlas` keeps the underlying
 Workspace well-formed.
 

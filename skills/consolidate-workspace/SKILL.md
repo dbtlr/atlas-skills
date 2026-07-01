@@ -1,13 +1,13 @@
 ---
-name: consolidate-sessions
-description: Lift Consolidation Candidates out of frozen Session Logs into maintained context — durable knowledge to the workspace, follow-ups to the work tracker, user observations to the shared profile — and groom the Brief back to small. Run periodically or when Session Logs have accumulated. Primary agent only.
+name: consolidate-workspace
+description: Consolidate the bound workspace's Session Logs — lift durable knowledge into the workspace (Brief, decisions, notes) and follow-ups into Mimir, mark each log consolidated via norn, and groom the Brief back to small. Scans only this workspace's unconsolidated logs. Primary agent only. (User observations → user.md/memory.md are consolidate-memory's job.)
 ---
 
-# consolidate-sessions
+# consolidate-workspace
 
-Inspect the record of work, lift durable truth out of it into maintained context, then **prune what's now redundant**. Durable knowledge routes into the vault workspace, follow-ups into Mimir, and user observations into the shared profile.
+Inspect this workspace's record of work, lift durable truth out of it into maintained context, then **prune what's now redundant**. Durable knowledge routes into the vault workspace; follow-ups route into Mimir.
 
-> **Primary agent only.**
+> **Primary agent only.** Workspace-scoped — it consolidates only the **bound** workspace (the `workspace` from `.atlas.toml` / the Session Primer). The cross-workspace `user.md` / `memory.md` regeneration is **consolidate-memory**, a separate skill.
 
 ## What consolidation is (and isn't)
 
@@ -16,15 +16,15 @@ Consolidation is a **different job** from `write-session-log`. write-session-log
 - **A fresh-looking Brief is NOT evidence that consolidation has run.** Litmus: *if a fact only lives in a dated Current-State paragraph or a per-session Learnings bullet, it is not consolidated yet — that's narrative, not maintained context.* Don't mistake a maintained Current State for a finished job.
 - **The frozen Session Log IS the durable record of *what happened*.** Maintained context carries only the *lifted residue*: a sharpened term → glossary, a hard-to-reverse decision → ADR, a durable principle → a `notes/` file, an open thread → the Brief/board. **Don't duplicate the log into the Brief.** The same content living in the log *and* a Current-State paragraph *and* a Learnings bullet is the bloat signature — **triplication is the smell.**
 
-## 1. Find what's new
+## 1. Find this workspace's unconsolidated logs
 
-Track the last run in a small state file:
-```
-<ATLAS_PATH>/artifacts/.atlas-consolidate-state.toml   # last_run = "<ISO ts>"
-```
-Read it; process Session Logs in `$ATLAS_PATH/artifacts/session-logs/` newer than `last_run` (all of them on first run). Process in batches if a stale watermark has let many accumulate; the per-log **Consolidation Candidates** section is the unit of work.
+There's no watermark file. Each Session Log carries a `workspace_consolidated` flag, so ask **norn** for the ones still open in this workspace:
 
-> **Watermark scope.** This cursor governs *this skill's* routing (durable knowledge + follow-ups). It does **not** cover the cross-project shared-profile regeneration (§2, user observations) — that runs across all workspaces and needs its own cursor. Advancing `last_run` past logs whose observation-bucket you deferred means a future profile run keyed on this cursor would skip them; if you defer that bucket, say so in the run report (§4) so the cursor isn't mistaken for "fully consolidated."
+```bash
+norn find --eq type:session-log --eq workspace:<workspace> --eq workspace_consolidated:false
+```
+
+Each returned log's **Consolidation Candidates** section is a unit of work; process oldest-first. The companion flag `memory_consolidated` belongs to **consolidate-memory** — don't read or touch it here.
 
 ## 2. Route each candidate — but verify first
 
@@ -38,13 +38,22 @@ Per `resources/consolidation-candidates.md`. **Before routing any candidate, ver
 |--------|-----------|
 | Durable knowledge | Workspace Brief (below the rule) / a `decisions/` ADR / a `notes/` note |
 | Future opportunities | a **Mimir** task (`mimir` CLI) if the repo tracks work there — never re-grow a task list the workspace has migrated out |
-| User observations | the shared profile (`shared/user.md` / `shared/memory.md`) regeneration, cross-project |
 
 - Promote durable knowledge into the right maintained file; **don't duplicate** what's already there.
 - For a hard-to-reverse decision, write a real ADR. For a durable *principle* (a generative rule, not a decision), prefer a `notes/` file over bloating the Brief.
-- For a follow-up / tech-debt / open-question, file it where the workspace tracks work (`status: backlog`), after the dedup + still-applies checks above.
-- **User observations are cross-project and the route changed.** The legacy `partner_model_log.jsonl` shim is **retired** — do not append to it. Observations feed the regeneration of the shared profile (`shared/user.md` / `shared/memory.md`), which spans **all** workspaces. A single-workspace consolidate run should **stage** new observations for that regeneration, **not** rewrite the shared profile from one workspace's logs (that skews it). Defer the rewrite to the cross-project run and note the deferral (§4).
+- For a follow-up / tech-debt / open-question, file it where the workspace tracks work, after the dedup + still-applies checks above.
+- **User observations are not this skill's bucket.** The `collaboration-pattern` candidates feed `shared/user.md` / `shared/memory.md`, which span **all** workspaces — that's **consolidate-memory**'s job, keyed on the separate `memory_consolidated` flag. Leave them for it; don't rewrite the shared profile from one workspace's logs.
 - A consolidated Session Log is **spent** — leave it frozen, but it's now prunable, not a permanent archive.
+
+### Mark the log consolidated
+
+Once a log's durable-knowledge + future-opportunity candidates are routed (or confirmed already-captured by the dedup check), mark it so it drops out of the scan:
+
+```bash
+norn set <log path> --field-json workspace_consolidated=true --yes
+```
+
+This touches only `workspace_consolidated` — never `memory_consolidated`.
 
 ## 3. Groom the Brief (a consolidation output, not a side task)
 
@@ -59,8 +68,8 @@ Consolidation isn't done until the Brief is **small again**. Follow `resources/w
 
 ## 4. Record the run
 
-Update the state file's `last_run` to now (accurate timestamp). Briefly report **what was promoted and where, what was dropped as stale/duplicate, and which buckets were deferred** (esp. the cross-project user-observations rewrite) so the watermark isn't mistaken for full consolidation.
+There's no state file to advance — the per-log `workspace_consolidated` flags **are** the record. Briefly report what was promoted and where, and what was dropped as stale/duplicate.
 
 ## Notes
 
-Keep the three routes in one place so their targets stay easy to maintain: durable knowledge → the vault workspace, follow-up work → a **Mimir** task, and `user.md`/`memory.md` → the cross-project shared-profile regeneration.
+Two flags, two skills: `workspace_consolidated` (this skill) and `memory_consolidated` (**consolidate-memory**). Each scans and marks only its own flag via norn, so a log is independently consolidated for its workspace and for the shared profile — neither blocks the other.
