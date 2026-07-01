@@ -19,6 +19,8 @@ modified: YYYY-MM-DD
 ```
 
 > The Shared Workspace profile files are **not** notes — `user.md` (`type: user-profile`), `memory.md` (`type: shared-memory`), and `observations.md` (`type: observations`) are skill-managed singletons with their own norn types, written by `consolidate-memory`. Don't hand-author them as `type: note`.
+>
+> `user.md` and `memory.md` carry an **above/below-the-line split** (a `---` rule, like the Workspace Brief): **above** is human canon (hand-authored, pinned — `consolidate-memory` never touches it); **below** is the agent's weighted consolidation (the skill owns it). Edit your own truths above the line; to canonize an agent-derived bullet, move it above.
 
 > **Specs/plans get no frontmatter.** They are not knowledge — a spec/plan is a transient review surface in `artifacts/scratch/`, deleted on merge. There is no `type: agent-artifact`. A durable, work-bearing agent-generated doc (a schema, an API contract) is just a **Note** (above), in the workspace `notes/`.
 

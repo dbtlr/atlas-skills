@@ -19,7 +19,7 @@ The vault is always the **atlas vault**; its location is the `ATLAS_PATH` enviro
 
 Scaffold the vault skeleton if missing (see `resources/vault-structure.md`):
 - `artifacts/session-logs/`, `artifacts/scratch/` (no `generated/` — specs/plans are transient, deleted on merge)
-- `Workspaces/shared/` with `user.md` (User Profile) and `memory.md` (Shared Memory). Seed them lightly if absent (a short user-profile interview can fill `user.md` later). If a legacy `partner_model.md` exists, offer to copy-and-curate it into `user.md` + `memory.md` rather than migrating in place.
+- `Workspaces/shared/` with `user.md` (User Profile) and `memory.md` (Shared Memory). Seed them lightly if absent (a short user-profile interview can fill `user.md` later). Seed each with the **above/below-the-line split**: a human-canon area, then a `---` rule, then the agent-consolidated region `consolidate-memory` maintains (above = hand-authored/pinned, never touched by the skill; below = weighted consolidation). If a legacy `partner_model.md` exists, offer to copy-and-curate it into `user.md` + `memory.md` rather than migrating in place.
 
 ## 2. Resolve the workspace name
 

@@ -78,22 +78,30 @@ never enters the shared profile on its own (see Actions → Add).
 
 ---
 
-## Managed vs. off-limits — the boundary reconcile must not cross
+## The line — what reconcile may touch
 
-Reconcile governs **only**:
+Both profile files use an **above/below-the-line** split (a `---` rule, like the
+Workspace Brief):
 
-- **`user.md`** — the whole file (every section is consolidated truth about the human).
-- **`memory.md` → the `## Operating lessons (carry across projects)` section only.**
+- **Above the `---` — human canon.** Hand-authored, human-pinned truths (`user.md`'s
+  `## Pinned by Drew`; `memory.md`'s `## Environment & tooling` + `## Preferred Tech
+  Stack`). Reconcile **never** reads-for-eviction, edits, prunes, or reorders anything
+  above the line. This is where a value the human holds but the logs rarely surface
+  (e.g. KISS) lives — safe from weight-based eviction by construction.
+- **Below the `---` — agent consolidation.** The weighted, pipeline-derived bullets.
+  Reconcile **owns** this region: add / strengthen / prune / budget by weight.
 
-**Off-limits — never edit, never prune, never reorder:** `memory.md`'s
-`## Environment & tooling` section and any other hand-authored block. These are
-human-curated facts with **no backing cluster by design** — so **"no backing cluster"
-must never be read as "stale"** there. If you're unsure whether a section is managed,
-treat it as off-limits and leave it.
+The managed region is simply **everything below the first `---` that follows the
+intro**; above it is off-limits. If a file has **no** such line (not yet migrated),
+treat the whole file as off-limits and stop — do not guess a boundary.
 
-Anchor every `norn edit` on the heading's **exact** text — `Operating lessons (carry
-across projects)`, parenthetical included — not a shortened form, or the edit won't
-match.
+**Read the whole file; write only below.** Check representation against **both**
+regions: a cluster already pinned above the line is *represented* — never re-add it
+below. To canonize a below-the-line bullet, the human moves it above; reconcile then
+leaves it alone (it's above the line).
+
+Anchor every `norn edit` on a heading's **exact** text (e.g. `Operating lessons (carry
+across projects)`, parenthetical included), and pin the vault: `norn -C "$ATLAS_PATH" edit …`.
 
 ---
 
@@ -102,7 +110,7 @@ match.
 Match ledger clusters to profile bullets by meaning, then:
 
 - **Add** — a **strong** cluster (recent **and** spread ≥ 2) **not** represented in the
-  profile → add a bullet, in the right file/section (see routing). Only **strong** earns
+  profile → add a bullet **below the line**, in the right file/section (see routing). Only **strong** earns
   a new bullet: never add from an `aging` or spread-1 cluster — a single-workspace
   pattern is local, and stays in the ledger accruing evidence until it gains spread.
 - **Strengthen** — a non-stale cluster **already** represented → refine the existing
@@ -120,11 +128,12 @@ Match ledger clusters to profile bullets by meaning, then:
   flag, don't prune. A wrongly kept bullet is cheap; a wrongly deleted one loses curated
   knowledge.
 
-**The grandfather rule (why "no cluster" ≠ "prune").** The profile predates the ledger,
-which fills over many runs. An incumbent bullet the ledger doesn't yet speak to is
-**grandfathered** — never pruned, never budget-evicted for lack of a cluster. Pruning
-and budget act **only** on ledger-backed bullets; unbacked incumbents are, at most,
-flagged. This is what makes the *first* runs safe (see Cold start).
+**The grandfather rule (why "no cluster" ≠ "prune").** Human canon is protected
+structurally — it's above the line. *Below* the line, the agent's own bullets predate a
+full ledger, so an incumbent the ledger doesn't yet speak to is **grandfathered** —
+never pruned, never budget-evicted for lack of a cluster. Pruning and budget act **only**
+on ledger-backed below-the-line bullets; unbacked ones are, at most, flagged. This is
+what makes the *first* runs safe (see Cold start).
 
 **Re-homing.** A cluster's `bucket` was the extractor's *guess*. Reconcile decides the
 real home: a truth about **the human** → `user.md`; reusable **agent craft / how to do
@@ -133,11 +142,13 @@ bullet is clearly in the wrong file, move it (add to the right, remove from the 
 
 ## Budget
 
-**15–25 bullets per file.** (Tighter than the old single-file 25–35 — there are two
-files now.) The profile is curated Active Context, not an append log. If a file is over
-budget after add/strengthen, **drop the lowest-`weight` bullets** among the
-**ledger-backed** ones, and **report the drops** — a strong new add evicting a weak
-backed incumbent is the mechanism working.
+**15–25 bullets per file, counting only *below-the-line* bullets** (human canon above
+the line is uncapped and never counted). Tighter than the old single-file 25–35 — there
+are two files now. The below-the-line region is curated Active Context, not an append
+log. If it is over budget after add/strengthen, **drop the lowest-`weight` bullets**
+among the **ledger-backed** ones, and **report the drops** — a strong new add evicting a
+weak backed incumbent is the mechanism working. (A value you never want evicted belongs
+*above* the line, not defended by budget.)
 
 **Budget never evicts an unbacked/flagged bullet.** Those have no computable weight —
 "unmeasured" is not "weakest." So budget can only tighten a file once enough of its
