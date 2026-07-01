@@ -51,7 +51,10 @@ memory_consolidated: false      # flipped true by consolidate-memory
 
 Values are YAML, so plain (unquoted) strings break on YAML's special characters. Quote any value when it contains them — most often `description` and `title`:
 
-- **Colon-space** (`foo: bar`) — a plain scalar with `: ` parses as a nested mapping and the value is silently dropped. Quote it: `description: "mimir: the work CLI"`.
+- **Colon-space anywhere in the value** (`… : …`) — **the #1 offender, and it recurs.** A colon *followed by a space* **anywhere** in an unquoted value (not just at the start) makes YAML read it as a nested mapping and **silently drop the whole field** — lenient loaders swallow it, strict parsers (Codex, the `skills` CLI, norn) reject the file. It bites ordinary prose:
+  - ✗ `description: Shipped the sync for dbtlr.com: local .env config` — breaks on `dbtlr.com: local`.
+  - ✗ `title: v0.10 — self-orienting responses: grooming, grill` — breaks on `responses: grooming`.
+  - **Fix (preferred): rephrase the `: ` to an em-dash** — `dbtlr.com — local .env config`. Or **quote the whole value**: `description: "…for dbtlr.com: local .env config"`.
 - **Leading special char** — if the value starts with `@ \` [ ] { } # & * ! | > % ? : -` or a quote, quote the whole value.
 - **`#` after a space** — starts a comment mid-value; quoting protects it.
 - **Line breaks** — a plain scalar can't span lines arbitrarily. Keep it one line, or use a block scalar: `>` (folded) / `|` (literal).
