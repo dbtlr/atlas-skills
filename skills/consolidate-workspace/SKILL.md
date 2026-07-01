@@ -16,6 +16,16 @@ Consolidation is a **different job** from `write-session-log`. write-session-log
 - **A fresh-looking Brief is NOT evidence that consolidation has run.** Litmus: *if a fact only lives in a dated Current-State paragraph or a per-session Learnings bullet, it is not consolidated yet — that's narrative, not maintained context.* Don't mistake a maintained Current State for a finished job.
 - **The frozen Session Log IS the durable record of *what happened*.** Maintained context carries only the *lifted residue*: a sharpened term → glossary, a hard-to-reverse decision → ADR, a durable principle → a `notes/` file, an open thread → the Brief/board. **Don't duplicate the log into the Brief.** The same content living in the log *and* a Current-State paragraph *and* a Learnings bullet is the bloat signature — **triplication is the smell.**
 
+## Preflight — norn is required
+
+This skill drives **norn** to find and mark Session Logs; there is no fallback. Check it's available before doing anything:
+
+```bash
+command -v norn || { echo "consolidate-workspace requires the 'norn' CLI, which was not found on PATH. Install norn and ensure it's on your PATH, then re-run."; exit 1; }
+```
+
+If `norn` is missing, **stop and tell the user to install norn and put it on their PATH** — do not fall back to manually scanning `artifacts/session-logs/`.
+
 ## 1. Find this workspace's unconsolidated logs
 
 There's no watermark file. Each Session Log carries a `workspace_consolidated` flag, so ask **norn** for the ones still open in this workspace:
