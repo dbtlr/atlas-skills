@@ -1,6 +1,6 @@
 # Vault structure
 
-Saga writes everything into the configured **vault root** (resolved from the Vault Registry, never hardcoded). Layout:
+Everything is written into the **atlas vault**, whose root is `$ATLAS_PATH`. Layout:
 
 ```
 <vault_root>/
@@ -15,7 +15,6 @@ Saga writes everything into the configured **vault root** (resolved from the Vau
       glossary.md            #   domain language (Relevant Context)
       decisions/             #   ADRs (Relevant Context)
       notes/                 #   design docs (Relevant Context)
-      tasks/                 #   work-state stand-in (Phase 1, until Mimir)
       archive/               #   superseded workspace knowledge
   artifacts/                 # transient, non-knowledge material (kept out of workspaces)
     session-logs/            #   Session Logs (consolidation-scoped, prunable once consolidated)
@@ -37,7 +36,7 @@ Saga writes everything into the configured **vault root** (resolved from the Vau
 | Durable agent-generated reference (schema, API/output contract) | `<workspace>/notes/` (it's just a Note) |
 | Spec/plan (Superpowers brainstorm/writing-plans output) | `artifacts/scratch/` — transient, **deleted on merge** |
 | Session Log | `artifacts/session-logs/` |
-| Follow-up work (Phase 1) | `<workspace>/tasks/` |
+| Follow-up work | Mimir tasks w/ `follow-up` tag and link to the task that it was a follow up from |
 | Superseded knowledge | `<workspace>/archive/` (with a why-archived footnote) |
 
 Never put Session Logs inside a workspace — they'd bloat present-tense context. Specs/plans aren't knowledge at all: review them, then delete on merge.
