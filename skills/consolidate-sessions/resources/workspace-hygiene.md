@@ -7,7 +7,7 @@ Guidance Session Start teaches the agent so it keeps the vault high-signal and d
 - The Brief is **Active Context** — loaded every session. Keep it concise.
 - It has two zones split by a horizontal rule:
   - **Above the rule** — durable manifest (overview, tech stack, key paths, conventions, navigation). Human-authored; agents don't rewrite it.
-  - **Below the rule** — session-tracked state (current state, what's next, open questions, learnings, recent sessions). Saga maintains this.
+  - **Below the rule** — session-tracked state (current state, what's next, open questions, learnings, recent sessions). The session skills maintain this.
 - Add to the Brief only what most future sessions need. Everything else is a note linked from the Brief (Relevant Context).
 - Prune: when something stops being current, move it out (to a note, or to `archive/` with a why-footnote). Keep "Recent Sessions" to the last few.
 

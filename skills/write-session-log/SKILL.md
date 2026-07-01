@@ -3,9 +3,9 @@ name: write-session-log
 description: Write the merged Session Log that memorializes a Session — what happened, decisions, deviations, and Consolidation Candidates. Trigger at a work boundary — a task/feature/investigation finished, a wrap-up signal, context nearing compaction, or an explicit request. Primary agent only.
 ---
 
-# Saga: write-session-log
+# write-session-log
 
-Memorialize the current **Session** as one frozen record, centered on **Consolidation Candidates**. This merges what a dev-log and a partner-log captured separately today.
+Memorialize the current **Session** as one frozen record, centered on **Consolidation Candidates** — the narrative of the work plus the user observations worth carrying forward, in a single log.
 
 > **Primary agent only.** Subagents never write Session Logs.
 
@@ -19,20 +19,22 @@ At a work boundary — don't wait to be asked:
 
 ## Where it goes
 
-Resolve the vault root from the Project Binding + Vault Registry (or reuse what `start-session` loaded). Write to:
+Resolve the vault root from `$ATLAS_PATH` (or reuse what `start-session` loaded). Write to:
 ```
-<vault_root>/<artifacts_dir>/session-logs/<YYYY-MM-DD-HHMM>-<slug>.md
+$ATLAS_PATH/artifacts/session-logs/<YYYY-MM-DD-HHMM>-<slug>.md
 ```
 Never write a Session Log inside the workspace. Use an accurate timestamp (`date "+%Y-%m-%d %H:%M %Z"`) — never invent one.
 
 ## What to write
 
-Start from `templates/session-log.md` (under `${CLAUDE_PLUGIN_ROOT}`). Fill every section; more detail is better than less — write for a future session with zero memory of today.
+Start from `templates/session-log.md`. Fill every section; more detail is better than less — write for a future session with zero memory of today.
 
-The heart is **Consolidation Candidates** — *"what happened that, had I known it earlier, would have saved time?"* Tag each by the taxonomy in `resources/consolidation-candidates.md`:
+The heart is **Consolidation Candidates** — *"what happened that, had I known it earlier, would have saved time?"* Tag each by the taxonomy in `references/consolidation-candidates.md`:
 - **Durable knowledge** — decisions, user-personas, user-stories
 - **Future opportunities** — tech-debt, follow-up-tasks, open-questions
 - **User observations** — collaboration-patterns
+
+**Mark carried candidates.** If a candidate repeats one a prior Session Log raised that was never actioned, list it as `carried (since <YYYY-MM-DD>)` (the first-raised date, optionally a count) rather than as fresh — see *Carried candidates* in `references/consolidation-candidates.md`. This is detection only: you surface the recurrence, you don't file or decide it (that's `consolidate-sessions`' job).
 
 ## After writing
 

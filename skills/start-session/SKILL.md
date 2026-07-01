@@ -1,11 +1,11 @@
 ---
 name: start-session
-description: Use at the very start of every primary-agent context in a Saga workspace — new session, resumed session, compaction, or clear/reset — before any other response or action. Assembles the Session Primer (User Profile + Shared Memory + Workspace Brief) and routes the work. Invoke it proactively; do not wait for the user to ask. Primary agent only — subagents never load this.
+description: Use at the very start of every primary-agent context in an atlas workspace — new session, resumed session, compaction, or clear/reset — before any other response or action. Assembles the Session Primer (User Profile + Shared Memory + Workspace Brief, plus the mimir work queue when present) and routes the work. Invoke it proactively; do not wait for the user to ask. Primary agent only — subagents never load this.
 ---
 
-# Saga: start-session
+# start-session
 
-The always-on entry point for a Saga session. Assemble the **Session Primer**, hold it as starting context, then route to the right Saga skill.
+The always-on entry point for an atlas session. Assemble the **Session Primer**, hold it as starting context, then route to the right skill.
 
 <SUBAGENT-STOP>
 If you were dispatched as a subagent to execute a specific task, skip this skill entirely — implementation only. The controller session owns session start and vault integration. Subagents never route on their own.
@@ -24,22 +24,22 @@ These thoughts mean STOP — you are rationalizing:
 | "The user just cleared context; this isn't a new session" | A clear/reset is a new primary-agent context. Rebuild the primer before continuing. |
 | "I'll wait until I'm told to start" | The trigger lives here, in this skill. Nothing else will tell you. Run it. |
 
-Building the Session Primer first is not optional. The one exception is the quiet exit in §1: if the primer reports the project is not a Saga workspace, stop silently and proceed normally — do not pitch initialization.
+Building the Session Primer first is not optional. The one exception is the quiet exit in §1: if the primer reports the project is not an atlas workspace, stop silently and proceed normally — do not pitch initialization.
 </EXTREMELY-IMPORTANT>
 
 ## 1. Build the Session Primer
 
-Run the primer-merge script that ships **inside this skill** — the path resolves whether Saga is installed as a plugin (`${CLAUDE_PLUGIN_ROOT}`), as a bare skill (`~/.agents/skills/`), or run in-repo:
+Run the primer-merge script that ships **inside this skill** — the path resolves whether the skills are installed globally (`~/.claude/skills/`, `~/.agents/skills/`) or run in-repo:
 
 ```bash
-python3 "$(ls "${CLAUDE_PLUGIN_ROOT}/skills/start-session/build_primer.py" \
+python3 "$(ls "$HOME/.claude/skills/start-session/build_primer.py" \
               "$HOME/.agents/skills/start-session/build_primer.py" \
               "skills/start-session/build_primer.py" 2>/dev/null | head -n1)"
 ```
 
-- If it prints `SAGA_UNINITIALIZED: …`, this project has no Project Binding (`.saga.toml`) — it isn't a Saga workspace. **Stop silently and proceed with the user's request normally; do not mention Saga or pitch initialization.** This skill triggers on *any* session (the trigger lives in the skill, not in a per-project file), so an unbound project is the common, expected case — exit quietly. Only route to **initialize-saga** if the user is explicitly setting up Saga (e.g. "/saga:initialize-saga", "initialize my workspace", "bind this repo to a vault").
-- If it reports the vault isn't registered, run **initialize-saga** to register/repair it (self-heal).
-- Otherwise, treat the printed payload as your **Active Context** for the session — User Profile, Shared Memory, and Workspace Brief. Internalize it; don't echo it back to the user.
+- If it prints `ATLAS_UNINITIALIZED: …`, this project has no Project Binding (`.atlas.toml`) — it isn't an atlas workspace. **Stop silently and proceed with the user's request normally; do not mention atlas or pitch initialization.** This skill triggers on *any* session (the trigger lives in the skill, not in a per-project file), so an unbound project is the common, expected case — exit quietly. Only route to **initialize-atlas** if the user is explicitly setting up atlas (e.g. "initialize my workspace", "bind this repo to a vault").
+- If it reports `ATLAS_PATH is not set`, the vault location is unknown — ask the user to `export ATLAS_PATH=<their atlas vault root>` (it always points at the atlas vault), then re-run.
+- Otherwise, treat the printed payload as your **Active Context** for the session — User Profile, Shared Memory, the Workspace Brief, and (when the repo tracks work in Mimir) the current work queue. Internalize it; don't echo it back to the user.
 
 ## 2. Hold the through-line
 
@@ -47,34 +47,25 @@ A **Session** is bounded by a body of work, not by one context window. The prime
 
 ## 3. Decisions & glossary are live
 
-The workspace `glossary.md` and `decisions/` are **constraints on the work, not an archive** — hold them open the whole session, whatever you're doing (planning, brainstorming, building):
+The workspace `glossary.md` and `decisions/` are authored by the **`domain-modeling`** skill: it maintains the glossary (from the project's context/domain terms) and writes the ADRs. **Redirect that skill to the workspace location** — the vault workspace (`<ATLAS_PATH>/Workspaces/<workspace>/`), where `glossary.md` and `decisions/` live — rather than its default in-repo path.
+
+**Repo override:** a repo may set `decisions = "local"` (or a path) in `.atlas.toml` to keep decisions/glossary *in the repo* instead of the vault workspace. When that key is present, honor the local target; otherwise default to the vault workspace.
+
+Wherever they live, `glossary.md` and `decisions/` are **constraints on the work, not an archive** — hold them open the whole session, whatever you're doing (planning, brainstorming, building):
 
 - **When planning, check the plan against `decisions/`.** A conflict means either the plan is wrong or the decision is stale — resolve it before building; never silently violate a recorded norm. Updating a decision can cascade, so do it thoughtfully.
 - **Keep language true to `glossary.md`.** Use its canonical terms and let them frame the problem; challenge drift the moment you notice it.
-- **Capture as it crystallizes** — a term sharpens → glossary; a hard-to-reverse, surprising, real-trade-off decision → an ADR (offer ADRs *sparingly*).
+- **Capture as it crystallizes** — a term sharpens → glossary; a hard-to-reverse, surprising, real-trade-off decision → an ADR (offer ADRs *sparingly*). Route both through `domain-modeling`.
 
-This is general practice, not gated behind any one skill. Depth — the 3-criteria ADR test, the glossary discipline, cascade-care — is in `resources/decisions-and-glossary.md` (under `${CLAUDE_PLUGIN_ROOT}`); reach for it when writing or updating either.
+This is general practice, not gated behind any one skill.
 
-## 4. Specs & plans are transient — never workspace knowledge
-
-When the Superpowers **brainstorm** skill writes a spec, or its **writing-plans** skill writes a plan, that file exists for **execution**: the spec gets alignment, the plan gives the agent something to follow. It is **not** knowledge. Once the work merges, nothing in it can't be found in the code, and the *why* that isn't in the code belongs in a **decision** or the **Session Log**. So the spec/plan is a **transient review surface, deleted on merge** — never a workspace note, never a durable vault file.
-
-- **Don't** write it into this repo or the Workspace, and **don't** treat it as an archive.
-- If it needs reviewing in Obsidian, it goes to the transient `<artifacts_dir>/scratch/` (expected-empty, cleared on merge) — no durable frontmatter, not `notes/`, not a decision.
-- Apply the test: **would it matter if this were deleted?** For a spec/plan the answer is no — delete it. Durable conclusions lift out into the glossary, decisions, and the Brief as you go.
-
-A durable, work-bearing document that *happens* to be agent-generated (a buildable schema, an API/output contract) is the exception — that's **just a note** in the workspace `notes/`, governed by the normal §3 hygiene. "Agent-generated" never decides where something lives; its role does.
-
-## 5. Routing surface
+## 4. Routing surface
 
 From the Active Context and what the user wants, route to:
-- **initialize-saga** — bind/scaffold/heal the workspace (also when the primer reports uninitialized).
-- **grill-me** — break a subject down by relentless interrogation, stress-testing a plan against the glossary and decisions (writes both as clarity lands).
+- **initialize-atlas** — bind/scaffold/heal the workspace (also when the primer reports uninitialized).
 - **write-session-log** — at a work boundary, memorialize the Session.
 - **consolidate-sessions** — lift Consolidation Candidates from Session Logs into maintained context.
 
-(Brainstorm-steering is deferred; the spec/plan transient-disposal rule lives in §4.)
+## 5. Keep the vault high-signal
 
-## 6. Keep the vault high-signal
-
-Follow `resources/workspace-hygiene.md` (under `${CLAUDE_PLUGIN_ROOT}`): keep the Brief small, put new files in the right place, prune stale content, and trigger `write-session-log` at the right time. Don't bloat Active Context.
+Follow `resources/workspace-hygiene.md`: keep the Brief small, put new files in the right place, prune stale content, and trigger `write-session-log` at the right time. Don't bloat Active Context. When writing any file into the vault, follow the frontmatter rules in `resources/frontmatter.md` so agents can find and progressively disclose it.

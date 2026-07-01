@@ -1,10 +1,20 @@
-# Saga — Agent Guide
+# Atlas Skills — Agent Guide
 
 Cross-harness guidance for agents working in this repo. `CLAUDE.md` is a symlink
 to this file so Claude Code and Codex read the same instructions.
 
-Saga is a workflow-orchestration plugin (the three-tool split: Norn=knowledge,
-Mimir=work, Saga=orchestration). See [README.md](README.md) for the full picture.
+Atlas Skills is a small, standalone set of skills that run a coherent agent
+**Session** against the **atlas vault**: assemble a Session Primer at the start,
+memorialize the work at a boundary, and consolidate durable knowledge back into
+the vault. Tasks are tracked in **Mimir** (the `mimir` CLI). See
+[README.md](README.md) for the full picture.
+
+## The vault
+
+Everything is read from and written to the atlas vault at **`$ATLAS_PATH`** —
+a required environment variable (there is no registry and no per-repo vault
+config). A repo is an atlas workspace when it has an `.atlas.toml` binding
+naming its `workspace`.
 
 ## Testing
 
@@ -16,31 +26,26 @@ Mimir=work, Saga=orchestration). See [README.md](README.md) for the full picture
   python3 -m unittest discover -s tests
   ```
 
-- Tests are hermetic: each builds a throwaway vault + registry under a temp dir
-  and points `build_primer.py` at it via `XDG_CONFIG_HOME`, so the real
-  `~/.config/saga` and vault are never touched.
+- Tests are hermetic: each builds a throwaway vault under a temp dir and points
+  `build_primer.py` at it via `ATLAS_PATH`, so the real atlas vault is never
+  touched.
 
 ## Running the primer
 
 ```bash
-python3 skills/start-session/build_primer.py
+ATLAS_PATH=~/vaults/atlas python3 skills/start-session/build_primer.py
 ```
 
-Resolves Project Binding (`.saga.toml`) → Vault Registry → vault root and prints
-the merged Active Context. Prints `SAGA_UNINITIALIZED: …` if the project isn't
-bound to a Workspace.
+Resolves the `.atlas.toml` binding → `workspace`, merges the Active Context
+(User Profile + Shared Memory + Workspace Brief), and folds in `mimir next` when
+the repo has a `.mimir.toml` and `mimir` is on PATH. Prints
+`ATLAS_UNINITIALIZED: …` if the repo isn't bound to a workspace.
 
 ## Editing skills
 
-Skills live in `skills/` — a single real directory, no symlink, no split. The
-five: `start-session`, `initialize-saga`, `grill-me`, `write-session-log`, `consolidate-sessions`. They're discovered
-by Claude Code (via `.claude-plugin/plugin.json`, auto-discovering the plugin
-root's `skills/`), by Codex (via `.codex-plugin/plugin.json` + `marketplace.json`
-when installed from GitHub — Codex copies the plugin into its own cache, it does
-NOT read skills from the working directory), and by the cross-harness `skills`
-CLI (`npx skills add dbtlr/saga`), which symlinks them into `~/.agents/skills/`.
-
-## Validating the plugin
-
-Run the `plugin-dev:plugin-validator` agent against the repo root after changing
-the manifest, skills, or plugin packaging.
+Skills live in `skills/` — one real directory. The four: `start-session`,
+`initialize-atlas`, `write-session-log`, `consolidate-sessions`. Each carries its
+own `resources/`, `references/`, and `templates/` co-located inside it, so the
+skill is self-contained wherever it's installed. They're discovered by Claude
+Code and Codex, and installed cross-harness by the `skills` CLI
+(`npx skills add …`), which symlinks them into `~/.agents/skills/`.

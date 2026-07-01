@@ -1,91 +1,64 @@
-# Saga
+# Atlas Skills
 
-**A workflow orchestrator for agentic coding sessions.** Saga teaches an agent to run a coherent working **Session** — the narrative layer that strings a body of work into a single through-line, from session start to session log.
+**A small set of skills for running a coherent agent session against the atlas vault.**
+Atlas Skills teaches an agent to run a working **Session** — a body of work with a
+single through-line, from session start to session log — backed by a markdown
+knowledge vault and by **Mimir** for work tracking.
 
-Saga owns neither knowledge nor work. It threads the two domain-owning tools beneath it into and out of the session.
-
-## The three-tool split
-
-Saga is one part of a three-tool ecosystem founded on the distinction **knowledge vs. work**:
-
-- **Norn** — *knowledge.* A generic query/validation/repair layer that keeps the Vault consistent. Enforces the rules it is given; has no native concept of a Workspace.
-- **Mimir** — *work.* An opinionated project tool that natively owns the work model (projects, initiatives, tasks, release planning).
-- **Saga** — *orchestration.* Threads Norn and Mimir into and out of a Session. Owns neither.
-
-The test each tool must pass is to state its purpose without "and": *Norn keeps knowledge. Mimir holds work. Saga weaves them into a session.*
-
-> Norn and Mimir are forthcoming. Saga's Phase 1 stands on its own against a markdown knowledge vault; the Norn/Mimir seams are Phase 2.
-
-## The five skills
-
-Skill names are prefixed/descriptive so they stay unambiguous when installed
-standalone (the Claude Code plugin also namespaces them as `saga:<name>`).
+## The four skills
 
 | Skill | What it does |
 | --- | --- |
-| `start-session` | Saga's entry point. Assembles the **Session Primer** (User Profile + Shared Memory + Workspace Brief) and routes the work. |
-| `initialize-saga` | Binds a project to a vault Workspace and scaffolds or self-heals it. |
-| `grill-me` | Breaks a subject down by relentless interrogation, stress-testing a plan against the workspace glossary and decisions and writing both as clarity lands. |
+| `start-session` | The entry point. Assembles the **Session Primer** (User Profile + Shared Memory + Workspace Brief, plus the `mimir next` work queue when present) and routes the work. |
+| `initialize-atlas` | Binds a project to a vault Workspace and scaffolds or self-heals it. |
 | `write-session-log` | At a work boundary, writes the merged **Session Log** memorializing what happened — decisions, deviations, and Consolidation Candidates. |
-| `consolidate-sessions` | Lifts Consolidation Candidates out of frozen Session Logs into maintained context — durable knowledge to the workspace, follow-ups to tasks, user observations to the partner-model log. |
+| `consolidate-sessions` | Lifts Consolidation Candidates out of frozen Session Logs into maintained context — durable knowledge to the workspace, follow-ups to Mimir, user observations to the shared profile. |
+
+## Requirements
+
+- **`ATLAS_PATH`** — set this to your atlas vault root (e.g. `export ATLAS_PATH=~/vaults/atlas`). The skills read and write the vault there; the vault is always the atlas vault.
+- **Python 3.11+** for `build_primer.py` (stdlib `tomllib`), or the `tomli` package on older interpreters.
+- **Mimir** (optional) — the `mimir` CLI, for repos that track work in Mimir. When a repo has a `.mimir.toml`, the primer folds `mimir next` into the Session Primer.
 
 ## Install
 
-Saga ships as a Claude Code plugin served from this repo via a local `directory` marketplace (`saga-dev`). From a Claude Code session:
+These are plain skills — no plugin. Install them cross-harness with the `skills`
+CLI, which fetches from GitHub and symlinks into `~/.agents/skills/` (read by
+Claude Code, Codex, Cursor, Gemini CLI, opencode, and others):
 
-```
-/plugin marketplace add /path/to/saga
-/plugin install saga@saga-dev
+```bash
+npx skills add dbtlr/atlas-skills --skill '*'
 ```
 
-Because the marketplace `source` is the repo directory itself, the installed plugin is served in place — `${CLAUDE_PLUGIN_ROOT}` resolves to the repo root, so the installed skills *are* the repo files (no copy to keep in sync).
+Refresh an existing install after changes:
+
+```bash
+npx skills update start-session initialize-atlas write-session-log consolidate-sessions -g -y
+```
 
 Once installed, a primary session starts with:
 
 ```
-/saga:start-session
+/start-session
 ```
 
 `start-session` is also the recovery point after a context clear/reset: it
 reloads the Session Primer for the same body of work before the agent continues.
 
-### Codex (and other agents)
-
-The verified install path is the cross-harness **`skills` CLI**, which fetches
-from GitHub and installs into `~/.agents/skills/` — read by Codex, Cursor,
-Gemini CLI, opencode, and others:
-
-```bash
-npx skills add dbtlr/saga --skill '*'
-```
-
-This is confirmed working: the skills load in Codex. Codex does **not**
-read skills from the working directory, and its native `plugin marketplace add`
-flow expects plugins nested under `plugins/<name>/` (Saga is a root plugin), so
-the `skills` CLI is the supported route. Codex **App** users can also add Saga
-via the Plugins UI — the repo ships `marketplace.json` (github self-reference)
-and `.codex-plugin/plugin.json` for that (App path not verified headlessly).
-
-Refresh an existing global install after Saga changes with:
-
-```bash
-npx skills update start-session initialize-saga write-session-log consolidate-sessions grill-me -g -y
-```
-
 ## How it fits together
 
-A **Session** is bounded by a body of work, not by a single context window. `start-session` builds the Session Primer that re-loads on each resumption, keeping the through-line across compactions and new windows. At a work boundary, `write-session-log` freezes what happened; `consolidate-sessions` later lifts the durable parts into maintained context. `initialize-saga` keeps the underlying Workspace well-formed.
+A **Session** is bounded by a body of work, not by a single context window.
+`start-session` builds the Session Primer that re-loads on each resumption,
+keeping the through-line across compactions and new windows. At a work boundary,
+`write-session-log` freezes what happened; `consolidate-sessions` later lifts the
+durable parts into maintained context. `initialize-atlas` keeps the underlying
+Workspace well-formed.
 
 ## Repository layout
 
-- `skills/` — the five skill sources (`start-session`, `initialize-saga`, `grill-me`, `write-session-log`, `consolidate-sessions`), discovered by both harnesses and the cross-harness `skills` CLI.
-- `skills/start-session/build_primer.py` — resolves Project Binding → Vault Registry → vault root and merges the Active Context. Ships **inside** the skill so it travels in every install model (plugin or bare `npx skills add`).
-- `resources/`, `templates/` — shared skill resources and document templates.
-- `tests/` — primer-merge tests.
-- `.claude-plugin/` — Claude Code plugin manifest and the local `saga-dev` marketplace.
-- `.codex-plugin/` — Codex plugin declaration (`plugin.json`), pointing at `skills/`.
-- `marketplace.json` — cross-harness marketplace manifest (github self-reference to `dbtlr/saga`).
-- `codex.json` — Codex config (instructions, allowed tools).
+- `skills/` — the four skill sources, each self-contained (its `build_primer.py`, `resources/`, `references/`, `templates/` co-located inside it).
+- `skills/start-session/build_primer.py` — resolves the `.atlas.toml` binding and `$ATLAS_PATH` into the merged Active Context, folding in `mimir next` when present.
+- `tests/` — primer-merge tests (stdlib `unittest`).
 
 ## License
 
