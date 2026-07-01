@@ -1,9 +1,8 @@
 """Hermetic tests for skills/start-session/build_primer.py.
 
-No external deps (stdlib unittest). Each test builds a throwaway vault +
-registry under a temp dir and points the script at it via XDG_CONFIG_HOME and
-an explicit start directory, so the real ~/.config/saga and vault are never
-touched.
+No external deps (stdlib unittest). Each test builds a throwaway vault under a
+temp dir and points the script at it via the ATLAS_PATH env var and an explicit
+start directory, so the real atlas vault is never touched.
 
 Run: python3 -m unittest discover -s tests
 """
@@ -29,40 +28,25 @@ class BuildPrimerTest(unittest.TestCase):
     def setUp(self):
         self._tmp = TemporaryDirectory()
         self.tmp = Path(self._tmp.name)
-        self.cfg_home = self.tmp / "cfg"
         self.vault = self.tmp / "vault"
         self.repo = self.tmp / "repo"
         self.repo.mkdir(parents=True)
-        self._prev_xdg = os.environ.get("XDG_CONFIG_HOME")
-        os.environ["XDG_CONFIG_HOME"] = str(self.cfg_home)
+        self._prev_atlas = os.environ.get("ATLAS_PATH")
+        os.environ["ATLAS_PATH"] = str(self.vault)
 
     def tearDown(self):
-        if self._prev_xdg is None:
-            os.environ.pop("XDG_CONFIG_HOME", None)
+        if self._prev_atlas is None:
+            os.environ.pop("ATLAS_PATH", None)
         else:
-            os.environ["XDG_CONFIG_HOME"] = self._prev_xdg
+            os.environ["ATLAS_PATH"] = self._prev_atlas
         self._tmp.cleanup()
 
     # --- fixtures ---
-    def write_registry(self, body=None):
-        if body is None:
-            body = (
-                'default_vault = "testvault"\n\n'
-                "[vaults.testvault]\n"
-                f'root = "{self.vault}"\n'
-                'workspaces_dir = "Workspaces"\n'
-                'shared_dir = "shared"\n'
-                'artifacts_dir = "artifacts"\n'
-            )
-        write(self.cfg_home / "saga" / "config.toml", body)
-
-    def write_binding(self, vault="testvault", workspace="demo"):
+    def write_binding(self, workspace="demo"):
         lines = []
-        if vault is not None:
-            lines.append(f'vault = "{vault}"')
         if workspace is not None:
             lines.append(f'workspace = "{workspace}"')
-        write(self.repo / ".saga.toml", "\n".join(lines) + "\n")
+        write(self.repo / ".atlas.toml", "\n".join(lines) + "\n")
 
     def write_active_context(self, workspace="demo"):
         ws = self.vault / "Workspaces"
@@ -78,48 +62,51 @@ class BuildPrimerTest(unittest.TestCase):
 
     # --- tests ---
     def test_happy_path_merges_active_context(self):
-        self.write_registry()
         self.write_binding()
         self.write_active_context()
         rc, out, err = self.run_main()
         self.assertEqual(rc, 0, err)
-        self.assertIn("Saga Session Primer — demo", out)
+        self.assertIn("Atlas Session Primer — demo", out)
         self.assertIn("user-profile-body", out)
         self.assertIn("shared-memory-body", out)
         self.assertIn("workspace-brief-body", out)
 
     def test_uninitialized_when_no_binding(self):
-        self.write_registry()
         rc, out, _ = self.run_main()
         self.assertEqual(rc, 0)
-        self.assertIn("SAGA_UNINITIALIZED", out)
+        self.assertIn("ATLAS_UNINITIALIZED", out)
 
-    def test_binding_missing_required_field(self):
-        self.write_registry()
+    def test_no_binding_exits_quietly_even_without_atlas_path(self):
+        os.environ.pop("ATLAS_PATH", None)
+        rc, out, _ = self.run_main()
+        self.assertEqual(rc, 0)
+        self.assertIn("ATLAS_UNINITIALIZED", out)
+
+    def test_binding_missing_workspace(self):
         self.write_binding(workspace=None)
         rc, _, err = self.run_main()
         self.assertEqual(rc, 2)
-        self.assertIn("must set both", err)
+        self.assertIn("must set `workspace`", err)
 
-    def test_registry_missing(self):
+    def test_atlas_path_unset_is_reported(self):
         self.write_binding()
+        os.environ.pop("ATLAS_PATH", None)
         rc, _, err = self.run_main()
         self.assertEqual(rc, 3)
-        self.assertIn("vault registry not found", err)
-
-    def test_unregistered_vault(self):
-        self.write_registry()
-        self.write_binding(vault="nope")
-        rc, _, err = self.run_main()
-        self.assertEqual(rc, 4)
-        self.assertIn("not registered", err)
+        self.assertIn("ATLAS_PATH is not set", err)
 
     def test_missing_active_context_file_is_flagged(self):
-        self.write_registry()
         self.write_binding()
         rc, out, err = self.run_main()
         self.assertEqual(rc, 0, err)
         self.assertIn("(missing: shared/user.md)", out)
+
+    def test_no_mimir_section_without_mimir_toml(self):
+        self.write_binding()
+        self.write_active_context()
+        rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertNotIn("Work Queue", out)
 
 
 if __name__ == "__main__":
