@@ -1,1 +1,0 @@
-../../../dotfiles/agents/.claude/skills/partner-model/SKILL.md

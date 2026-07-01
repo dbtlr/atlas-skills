@@ -1,1 +1,0 @@
-../../../dotfiles/agents/.claude/skills/dev-log/SKILL.md
