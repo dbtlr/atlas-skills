@@ -68,4 +68,4 @@ From the Active Context and what the user wants, route to:
 
 ## 5. Keep the vault high-signal
 
-Follow `resources/workspace-hygiene.md`: keep the Brief small, put new files in the right place, prune stale content, and trigger `write-session-log` at the right time. Don't bloat Active Context.
+Follow `resources/workspace-hygiene.md`: keep the Brief small, put new files in the right place, prune stale content, and trigger `write-session-log` at the right time. Don't bloat Active Context. When writing any file into the vault, follow the frontmatter rules in `resources/frontmatter.md` so agents can find and progressively disclose it.

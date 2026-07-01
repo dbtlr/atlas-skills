@@ -10,9 +10,11 @@ import contextlib
 import io
 import os
 import sys
+import types
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 
 SKILL_DIR = Path(__file__).resolve().parent.parent / "skills" / "start-session"
 sys.path.insert(0, str(SKILL_DIR))
@@ -97,6 +99,7 @@ class BuildPrimerTest(unittest.TestCase):
 
     def test_missing_active_context_file_is_flagged(self):
         self.write_binding()
+        self.vault.mkdir(parents=True, exist_ok=True)  # vault exists; the files inside don't
         rc, out, err = self.run_main()
         self.assertEqual(rc, 0, err)
         self.assertIn("(missing: shared/user.md)", out)
@@ -106,6 +109,61 @@ class BuildPrimerTest(unittest.TestCase):
         self.write_active_context()
         rc, out, err = self.run_main()
         self.assertEqual(rc, 0, err)
+        self.assertNotIn("Work Queue", out)
+
+    def test_atlas_path_nonexistent_dir_is_reported(self):
+        self.write_binding()
+        os.environ["ATLAS_PATH"] = str(self.tmp / "does-not-exist")
+        rc, _, err = self.run_main()
+        self.assertEqual(rc, 3)
+        self.assertIn("missing directory", err)
+
+    def test_binding_found_by_walking_up_from_subdir(self):
+        self.write_binding()
+        self.write_active_context()
+        sub = self.repo / "a" / "b"
+        sub.mkdir(parents=True)
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = build_primer.main(["build_primer.py", str(sub)])
+        self.assertEqual(rc, 0, err.getvalue())
+        self.assertIn("Atlas Session Primer — demo", out.getvalue())
+
+    # --- mimir fold ---
+    def _mimir_toml(self):
+        (self.repo / ".mimir.toml").write_text("", encoding="utf-8")
+
+    def test_mimir_section_added_when_toml_and_binary_present(self):
+        self.write_binding()
+        self.write_active_context()
+        self._mimir_toml()
+        fake = types.SimpleNamespace(returncode=0, stdout="TASK-1 do the thing\n", stderr="")
+        with mock.patch.object(build_primer.shutil, "which", return_value="/usr/bin/mimir"), \
+             mock.patch.object(build_primer.subprocess, "run", return_value=fake) as run:
+            rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertIn("Work Queue (mimir next)", out)
+        self.assertIn("TASK-1 do the thing", out)
+        self.assertEqual(run.call_args.kwargs.get("cwd"), self.repo.resolve())
+
+    def test_mimir_section_skipped_on_nonzero_exit(self):
+        self.write_binding()
+        self.write_active_context()
+        self._mimir_toml()
+        fake = types.SimpleNamespace(returncode=1, stdout="boom", stderr="err")
+        with mock.patch.object(build_primer.shutil, "which", return_value="/usr/bin/mimir"), \
+             mock.patch.object(build_primer.subprocess, "run", return_value=fake):
+            rc, out, _ = self.run_main()
+        self.assertEqual(rc, 0)
+        self.assertNotIn("Work Queue", out)
+
+    def test_mimir_section_skipped_when_binary_absent(self):
+        self.write_binding()
+        self.write_active_context()
+        self._mimir_toml()
+        with mock.patch.object(build_primer.shutil, "which", return_value=None):
+            rc, out, _ = self.run_main()
+        self.assertEqual(rc, 0)
         self.assertNotIn("Work Queue", out)
 
 

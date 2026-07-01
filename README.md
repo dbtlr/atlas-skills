@@ -27,7 +27,7 @@ CLI, which fetches from GitHub and symlinks into `~/.agents/skills/` (read by
 Claude Code, Codex, Cursor, Gemini CLI, opencode, and others):
 
 ```bash
-npx skills add dbtlr/saga-plugin --skill '*'
+npx skills add dbtlr/atlas-skills --skill '*'
 ```
 
 Refresh an existing install after changes:

@@ -117,6 +117,13 @@ def main(argv: list[str]) -> int:
         return 3
 
     root = Path(atlas_path).expanduser()
+    if not root.is_dir():
+        sys.stderr.write(
+            f"atlas: ATLAS_PATH points to a missing directory: {root}. "
+            "Set it to your atlas vault root.\n"
+        )
+        return 3
+
     workspaces_dir = root / "Workspaces"
     shared_dir = workspaces_dir / "shared"
     ws_dir = workspaces_dir / workspace

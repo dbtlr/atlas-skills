@@ -5,7 +5,7 @@ description: Write the merged Session Log that memorializes a Session — what h
 
 # write-session-log
 
-Memorialize the current **Session** as one frozen record, centered on **Consolidation Candidates**. This merges what a dev-log and a partner-log captured separately today.
+Memorialize the current **Session** as one frozen record, centered on **Consolidation Candidates** — the narrative of the work plus the user observations worth carrying forward, in a single log.
 
 > **Primary agent only.** Subagents never write Session Logs.
 
@@ -21,7 +21,7 @@ At a work boundary — don't wait to be asked:
 
 Resolve the vault root from `$ATLAS_PATH` (or reuse what `start-session` loaded). Write to:
 ```
-<vault_root>/<artifacts_dir>/session-logs/<YYYY-MM-DD-HHMM>-<slug>.md
+$ATLAS_PATH/artifacts/session-logs/<YYYY-MM-DD-HHMM>-<slug>.md
 ```
 Never write a Session Log inside the workspace. Use an accurate timestamp (`date "+%Y-%m-%d %H:%M %Z"`) — never invent one.
 

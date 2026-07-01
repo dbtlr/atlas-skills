@@ -22,7 +22,7 @@ Track the last run in a small state file:
 ```
 <ATLAS_PATH>/artifacts/.atlas-consolidate-state.toml   # last_run = "<ISO ts>"
 ```
-Read it; process Session Logs in `<artifacts_dir>/session-logs/` newer than `last_run` (all of them on first run). Process in batches if a stale watermark has let many accumulate; the per-log **Consolidation Candidates** section is the unit of work.
+Read it; process Session Logs in `$ATLAS_PATH/artifacts/session-logs/` newer than `last_run` (all of them on first run). Process in batches if a stale watermark has let many accumulate; the per-log **Consolidation Candidates** section is the unit of work.
 
 > **Watermark scope.** This cursor governs *this skill's* routing (durable knowledge + follow-ups). It does **not** cover the cross-project shared-profile regeneration (§2, user observations) — that runs across all workspaces and needs its own cursor. Advancing `last_run` past logs whose observation-bucket you deferred means a future profile run keyed on this cursor would skip them; if you defer that bucket, say so in the run report (§4) so the cursor isn't mistaken for "fully consolidated."
 
