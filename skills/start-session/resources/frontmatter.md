@@ -11,12 +11,14 @@ Lives in a Workspace (`Workspaces/<name>/`) or the Shared Workspace (`Workspaces
 title: <concise name>
 description: <one or two sentences: what's inside and why an agent should care>
 type: note
-kind: workspace | glossary | decision | user-profile | shared-memory
+kind: workspace | glossary | decision
 workspace: <workspace-slug>   # "shared" for Shared Workspace globals
 created: YYYY-MM-DD
 modified: YYYY-MM-DD
 ---
 ```
+
+> The Shared Workspace profile files are **not** notes — `user.md` (`type: user-profile`), `memory.md` (`type: shared-memory`), and `observations.md` (`type: observations`) are skill-managed singletons with their own norn types, written by `consolidate-memory`. Don't hand-author them as `type: note`.
 
 > **Specs/plans get no frontmatter.** They are not knowledge — a spec/plan is a transient review surface in `artifacts/scratch/`, deleted on merge. There is no `type: agent-artifact`. A durable, work-bearing agent-generated doc (a schema, an API contract) is just a **Note** (above), in the workspace `notes/`.
 
