@@ -5,7 +5,7 @@ Atlas Skills teaches an agent to run a working **Session** — a body of work wi
 single through-line, from session start to session log — backed by a markdown
 knowledge vault and by **Mimir** for work tracking.
 
-## The four skills
+## The five skills
 
 | Skill | What it does |
 | --- | --- |
@@ -13,6 +13,7 @@ knowledge vault and by **Mimir** for work tracking.
 | `initialize-atlas` | Binds a project to a vault Workspace and scaffolds or self-heals it. |
 | `write-session-log` | At a work boundary, writes the merged **Session Log** memorializing what happened — decisions, deviations, and Consolidation Candidates. |
 | `consolidate-workspace` | Consolidates the bound workspace's Session Logs — lifts durable knowledge into the workspace (Brief / decisions / notes) and follow-ups into Mimir, marks each log via norn, and grooms the Brief back to small. |
+| `consolidate-memory` | (Global) regenerates the shared `user.md` / `memory.md` from user-observation candidates across **all** workspaces' Session Logs. The cross-project counterpart to `consolidate-workspace`. |
 
 ## Requirements
 
@@ -33,7 +34,7 @@ npx skills add dbtlr/atlas-skills --skill '*'
 Refresh an existing install after changes:
 
 ```bash
-npx skills update start-session initialize-atlas write-session-log consolidate-workspace -g -y
+npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory -g -y
 ```
 
 Once installed, a primary session starts with:
@@ -50,13 +51,14 @@ reloads the Session Primer for the same body of work before the agent continues.
 A **Session** is bounded by a body of work, not by a single context window.
 `start-session` builds the Session Primer that re-loads on each resumption,
 keeping the through-line across compactions and new windows. At a work boundary,
-`write-session-log` freezes what happened; `consolidate-workspace` later lifts the
-durable parts into maintained context. `initialize-atlas` keeps the underlying
+`write-session-log` freezes what happened; `consolidate-workspace` later lifts a
+workspace's durable parts into maintained context, and `consolidate-memory` folds
+user observations into the shared profile. `initialize-atlas` keeps the underlying
 Workspace well-formed.
 
 ## Repository layout
 
-- `skills/` — the four skill sources, each self-contained (its `build_primer.py`, `resources/`, `references/`, `templates/` co-located inside it).
+- `skills/` — the five skill sources, each self-contained (its `build_primer.py`, `resources/`, `references/`, `templates/` co-located inside it).
 - `skills/start-session/build_primer.py` — resolves the `.atlas.toml` binding and `$ATLAS_PATH` into the merged Active Context, folding in `mimir next` when present.
 - `tests/` — primer-merge tests (stdlib `unittest`).
 
