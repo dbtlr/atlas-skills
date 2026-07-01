@@ -1,67 +1,150 @@
 ---
 name: consolidate-memory
-description: Consolidate user observations across ALL workspaces' Session Logs into the shared profile — regenerate user.md (how the human works) and memory.md (the agent's cross-project operating knowledge), merge-not-clobber, then mark each log via norn. Global and on-demand; the counterpart to consolidate-workspace. Primary agent only.
+description: Consolidate user + agent-craft observations from ALL workspaces' Session Logs into the shared profile via a weighted extract→reduce→reconcile pipeline (ADR 0017) — profile-blind extractors mine whole logs into a durable observations ledger, then a computed spread×decay weight reconciles it into user.md and memory.md. Global and on-demand; the counterpart to consolidate-workspace. Primary agent only.
 ---
 
 # consolidate-memory
 
-The **global** counterpart to `consolidate-workspace`. Where that skill lifts a single workspace's durable knowledge into that workspace, this one lifts **user observations** out of **every** workspace's Session Logs into the **shared profile** — `shared/user.md` (the human) and `shared/memory.md` (the agent's cross-project operating knowledge).
+The **global** counterpart to `consolidate-workspace`. Where that skill lifts a single
+workspace's durable knowledge into that workspace, this one lifts **observations about
+the human and the craft** out of **every** workspace's Session Logs into the **shared
+profile** — `shared/user.md` (the human) and `shared/memory.md` (the agent's
+cross-project operating knowledge).
 
-> **Primary agent only. Global, not workspace-bound** — it reads logs across all workspaces and writes the vault-global Shared Workspace. It replaces the retired weekly `partner_model.md` consolidation loop.
+It is a **weighted, sub-agent pipeline** (ADR 0017), not a one-shot rewrite. The v1
+"read the observation bucket and edit the profile" had a fatal bias — the agent
+over-weighted the current session and could only add. v2 replaces it with
+**extract → reduce → reconcile** over a durable, accumulating ledger
+(`shared/observations.md`), where a bullet earns its place by **computed weight**
+(spread across workspaces × recency decay), not by having been seen just now.
 
-## Preflight — norn is required
+> **Primary agent only. Global, not workspace-bound** — it reads logs across all
+> workspaces and writes the vault-global Shared Workspace.
 
-This skill drives **norn** to find and mark Session Logs; there is no fallback. Check it's available before doing anything:
-
-```bash
-command -v norn || { echo "consolidate-memory requires the 'norn' CLI, which was not found on PATH. Install norn and ensure it's on your PATH, then re-run."; exit 1; }
+```
+memory_consolidated:false logs ──shard by workspace──▶ [extract] profile-blind sub-agent per workspace
+                                                              │ observations (+ provenance)
+                                                              ▼
+                                              [reduce] one sub-agent → observations.md ledger
+                                                              │
+                                          mark every extracted log memory_consolidated:true
+                                                              │
+                                    [reconcile] primary: weights.py → edit user.md / memory.md
 ```
 
-If `norn` is missing, **stop and tell the user to install norn and put it on their PATH** — do not fall back to manually scanning `artifacts/session-logs/`.
+The three moves are governed by two rubrics — read them when you reach each step:
 
-## 1. Find logs with unconsolidated observations
+- **Extract + reduce** → [`references/extraction-rubric.md`](references/extraction-rubric.md)
+- **Reconcile** → [`references/reconcile-rubric.md`](references/reconcile-rubric.md)
 
-There's no watermark file. Each Session Log carries a `memory_consolidated` flag. Scan **all** workspaces (no `workspace:` filter — this is the global run):
+## Preflight — hard dependencies
 
-```bash
-norn find --eq type:session-log --eq memory_consolidated:false
-```
+Three hard dependencies, no fallbacks. Confirm before doing anything:
 
-The **User observations** section of each returned log's Consolidation Candidates (the `collaboration-pattern` items) is the unit of work. The companion flag `workspace_consolidated` belongs to **consolidate-workspace** — don't read or touch it here. Process a batch, then regenerate (§2) once, from the whole batch — never rewrite the profile per-log.
+1. **`norn` and `python3` on PATH:**
 
-## 2. Regenerate `user.md` + `memory.md`
+   ```bash
+   command -v norn    || { echo "consolidate-memory requires the 'norn' CLI on PATH. Install it and re-run."; exit 1; }
+   command -v python3 || { echo "consolidate-memory requires python3 (for weights.py). Install it and re-run."; exit 1; }
+   ```
 
-Gather the user-observation candidates across the batch, then update the two shared files. **Split by subject:**
+2. **Sub-agent dispatch.** Extraction is **always** a fresh sub-agent (even for a
+   one-log batch) — that clean context *is* the bias fix. If your harness can't
+   dispatch sub-agents, stop; do not run extraction inline in this (context-polluted)
+   session.
 
-- **`shared/user.md` (the human)** — how the collaborator thinks, communicates, decides, and works. Durable truths *about the person*.
-- **`shared/memory.md` (the agent)** — reusable operating craft and environment/tooling facts the agent carries across projects. Durable truths *about doing the work*.
+If `norn` or `python3` is missing, **stop and tell the user to install it** — never
+fall back to hand-scanning `artifacts/session-logs/` or eyeballing weights.
 
-**Merge, don't clobber.** These files are hand-curated and load-bearing (they're Active Context). Update them in place — merge new signal into existing bullets, correct what's stale, delete what's superseded. **Never** regenerate from scratch or drop the hand-authored environment/tooling facts in `memory.md`.
+## 1. Find the batch
 
-**Editorial constraints** (carried from the retired partner-model consolidation packet):
-
-- **Budget.** Target ~25–35 bullets per file; never exceed 40 without saying why in the run report.
-- **Prefer deletion, merging, and correction over addition.** The profile is curated context, not an append log.
-- **Keep only facts that change how a fresh agent behaves across projects tomorrow.** If it only matters to one project, it isn't profile material — it belongs in that workspace (via `consolidate-workspace`), not here.
-- **Strip the project-specific.** No exact project names, command names, issue/PR numbers, or stale workspace lists. If a project-specific observation contains a reusable *principle*, keep only the principle.
-- **One observation, one home.** A pattern about the human → `user.md`; the same insight framed as agent craft → `memory.md`. Don't double-file.
-
-## 3. Mark each processed log
-
-After a log's user-observation bucket has been folded in (or confirmed already-captured), mark it so it drops out of the scan:
+Each Session Log carries a `memory_consolidated` flag. Scan **all** workspaces (no
+`workspace:` filter — this is the global run). Pull **every** match with both the
+grouping key and the mark target — `find` defaults to a **limit of 10**, which would
+silently truncate a global sweep, so pass `--no-limit`:
 
 ```bash
-norn set <log path> --field-json memory_consolidated=true --yes
+norn find --eq type:session-log --eq memory_consolidated:false \
+  --no-limit --format json --col workspace,.path
 ```
 
-This touches only `memory_consolidated` — never `workspace_consolidated`.
+Output is `{ "documents": [ { "frontmatter": {"workspace": …}, "path": … } ], "total": N }`.
+**Group the documents by `frontmatter.workspace`** — that's the extractor unit (§2) —
+and keep each doc's **`path`** for marking (§4). Check `returned == total` to confirm
+nothing was truncated.
 
-## 4. Record the run
+The companion flag `workspace_consolidated` belongs to **consolidate-workspace** —
+don't read or touch it here. An empty batch is not a reason to skip reconcile (§5) —
+decay may still have changed weights.
 
-There's no state file to advance — the per-log `memory_consolidated` flags **are** the record. Briefly report what changed in `user.md` / `memory.md` (added / merged / corrected / deleted), and how many logs were marked.
+## 2. Extract (map) — one fresh, profile-blind sub-agent per workspace
+
+For each workspace group, dispatch a **fresh** sub-agent per the **Map** section of the
+extraction rubric. Two rules are load-bearing:
+
+- **Profile-blind.** Do **not** paste `user.md` / `memory.md` / `observations.md` into
+  the prompt, and instruct it not to read them. An extractor that has seen the profile
+  echoes it back.
+- **Whole-log.** It mines the entire log (not just the "User observations" bucket) and
+  returns observations with provenance `{statement, bucket, log, workspace, date}`.
+
+Hand each extractor the rubric and its workspace's log paths; collect the outputs. (A
+workspace with a large backlog can be chunked across several extractors — see the
+rubric; the unit stays the workspace.)
+
+## 3. Reduce — one sub-agent writes the ledger
+
+Dispatch a **single** sub-agent with **all** extractor outputs + the current
+`observations.md`, per the **Reduce** section of the extraction rubric. It semantically
+clusters, appends dated evidence to matching clusters or creates new ones, and writes
+`observations.md`. It never computes weight and never prunes.
+
+## 4. Mark every extracted log
+
+After reduce has written, mark **every log dispatched to an extractor** — including
+thin ones that yielded nothing (they were still extracted from; leaving them unmarked
+re-scans them forever). Use each doc's `path` from §1's batch:
+
+```bash
+norn set <path> --field-json memory_consolidated=true --yes
+```
+
+This touches only `memory_consolidated` — never `workspace_consolidated`. The flag
+means **"extracted into the ledger,"** not "in the profile."
+
+## 5. Reconcile — weight-gated, into the profile
+
+This step is run by **you (the primary)**, and is safe despite session pollution
+because it is **weight-gated** — a single session can't manufacture spread×decay
+weight. Run the helper that ships in this skill for the computed ranking (the path
+resolves whether the skill is installed globally or run in-repo), then edit per the
+reconcile rubric:
+
+```bash
+WEIGHTS="$(ls "$HOME/.claude/skills/consolidate-memory/weights.py" \
+              "$HOME/.agents/skills/consolidate-memory/weights.py" \
+              "skills/consolidate-memory/weights.py" 2>/dev/null | head -n1)"
+python3 "$WEIGHTS" "$ATLAS_PATH/Workspaces/shared/observations.md" --format table
+```
+
+Then apply [`references/reconcile-rubric.md`](references/reconcile-rubric.md): add
+strong clusters, strengthen represented ones, prune only stale-backed bullets
+(conservative, reported), respect the managed/off-limits boundary and the budget.
+**Run reconcile every time**, even on an empty batch (decay can prune on its own). On
+early/thin-ledger runs it should *barely touch* the profile — never delete curated
+bullets the ledger doesn't yet back (see the rubric's Cold start).
+
+## 6. Report the run
+
+There's no state file — the per-log flags and the ledger **are** the record. Report:
+logs extracted + marked; ledger clusters added / evidence appended; and per profile
+file, bullets added / strengthened / pruned (with justification) / flagged, plus any
+budget drops.
 
 ## Notes
 
-Two flags, two skills: `memory_consolidated` (this skill) and `workspace_consolidated` (**consolidate-workspace**). Each scans and marks only its own flag via norn, so a log is independently consolidated for the shared profile and for its workspace — neither blocks the other.
+Two flags, two skills: `memory_consolidated` (this skill) and `workspace_consolidated`
+(**consolidate-workspace**). Each scans and marks only its own flag via norn, so a log
+is independently consolidated for the shared profile and for its workspace.
 
-**Trigger:** on-demand for now — run it when the profile is due a refresh. *(Open: it may later ride a schedule, e.g. a periodic loop, once it's stable and needs no operator input.)*
+**Trigger:** on-demand — run it when the profile is due a refresh.
