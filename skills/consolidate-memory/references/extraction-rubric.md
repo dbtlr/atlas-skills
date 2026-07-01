@@ -141,7 +141,9 @@ minting a near-identical heading.
 
 Follow the format documented in `observations.md` itself ("Entry format" + "How to
 write") — that file is the source of truth for structure; this rubric governs
-*judgment*. In short:
+*judgment*. **Pin the vault: every `norn edit`/`set` here must pass `-C "$ATLAS_PATH"`**
+(norn keys off cwd/`.norn`, not `ATLAS_PATH`; a sub-agent running from another cwd will
+otherwise write to the wrong vault or a stray `.norn`). In short:
 
 - **New cluster** → `append_to_section` on heading `Clusters`; content is a full
   `### <statement>` block with the fields **exactly as `observations.md` shows them** —
@@ -174,15 +176,17 @@ semantic clustering can't be perfectly idempotent across re-extraction.
 
 The skill (`SKILL.md`) wires this; the contract the sub-agents rely on:
 
-1. `norn find --eq type:session-log --eq memory_consolidated:false` → the batch.
-   Group by `workspace`.
+1. `norn -C "$ATLAS_PATH" find --eq type:session-log --eq memory_consolidated:false` →
+   the batch. Group by `workspace`. (Pin the vault with `-C` on **every** norn call —
+   norn resolves its vault from cwd/`.norn`, not from `ATLAS_PATH`; a bare call from
+   the wrong cwd hits the wrong vault.)
 2. Dispatch **one extractor per workspace group** (fresh context, profile-blind).
    A workspace with a large backlog may be sub-sharded, but the unit is the workspace.
 3. Collect all extractor outputs; dispatch **one** reduce agent with them + the
    current `observations.md`.
 4. After reduce has written, mark **every log dispatched to an extractor** — not just
    the ones that produced clusters:
-   `norn set <log> --field-json memory_consolidated=true --yes`.
+   `norn -C "$ATLAS_PATH" set <log> --field-json memory_consolidated=true --yes`.
    The flag means **"extracted into the ledger,"** not "in the profile." A thin log
    that yielded nothing *was still extracted from*, so it must be marked too — else it
    is re-scanned on every future run forever (wasted work, and a re-extraction path

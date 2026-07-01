@@ -185,8 +185,10 @@ merging signal into a living document, not rebuilding it.
 
 Use `norn edit` for surgical changes (`str_replace` to refine a bullet,
 `append_to_section` to add one under the right heading, `replace_section` only when
-rewriting a whole managed section deliberately). When you change a file, bump its
-`modified` frontmatter: `norn set <file> --field-json modified=<now> --yes`.
+rewriting a whole managed section deliberately). **Pin the vault on every call:
+`norn -C "$ATLAS_PATH" edit …`** — norn resolves its vault from cwd/`.norn`, not from
+`ATLAS_PATH`, so an unpinned call can edit the wrong vault. When you change a file,
+bump its `modified` frontmatter: `norn -C "$ATLAS_PATH" set <file> --field-json modified=<now> --yes`.
 
 ## Report the run
 

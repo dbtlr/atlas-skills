@@ -41,11 +41,12 @@ The three moves are governed by two rubrics — read them when you reach each st
 
 Three hard dependencies, no fallbacks. Confirm before doing anything:
 
-1. **`norn` and `python3` on PATH:**
+1. **`norn` and `python3` on PATH, and `ATLAS_PATH` set to the atlas vault root:**
 
    ```bash
    command -v norn    || { echo "consolidate-memory requires the 'norn' CLI on PATH. Install it and re-run."; exit 1; }
    command -v python3 || { echo "consolidate-memory requires python3 (for weights.py). Install it and re-run."; exit 1; }
+   [ -n "$ATLAS_PATH" ] && [ -f "$ATLAS_PATH/.norn/config.yaml" ] || { echo "consolidate-memory needs ATLAS_PATH set to the atlas vault root (the dir containing .norn/config.yaml)."; exit 1; }
    ```
 
 2. **Sub-agent dispatch.** Extraction is **always** a fresh sub-agent (even for a
@@ -53,8 +54,15 @@ Three hard dependencies, no fallbacks. Confirm before doing anything:
    dispatch sub-agents, stop; do not run extraction inline in this (context-polluted)
    session.
 
-If `norn` or `python3` is missing, **stop and tell the user to install it** — never
-fall back to hand-scanning `artifacts/session-logs/` or eyeballing weights.
+If any dependency is missing, **stop and tell the user** — never fall back to
+hand-scanning `artifacts/session-logs/` or eyeballing weights.
+
+> **Pin the vault on every norn call: `norn -C "$ATLAS_PATH" …`.** norn resolves its
+> vault from the current directory's `.norn/config.yaml` (or `-C`/`--config`) — it does
+> **not** read `ATLAS_PATH` (that is atlas-skills' own variable; "atlas" is just this
+> vault's name). A bare `norn` run from some other cwd will silently operate on a
+> different vault — or a stray `.norn` — and corrupt the wrong place. Always pass
+> `-C "$ATLAS_PATH"`, including in every sub-agent you dispatch that touches norn.
 
 ## 1. Find the batch
 
@@ -64,7 +72,7 @@ grouping key and the mark target — `find` defaults to a **limit of 10**, which
 silently truncate a global sweep, so pass `--no-limit`:
 
 ```bash
-norn find --eq type:session-log --eq memory_consolidated:false \
+norn -C "$ATLAS_PATH" find --eq type:session-log --eq memory_consolidated:false \
   --no-limit --format json --col workspace,.path
 ```
 
@@ -106,7 +114,7 @@ thin ones that yielded nothing (they were still extracted from; leaving them unm
 re-scans them forever). Use each doc's `path` from §1's batch:
 
 ```bash
-norn set <path> --field-json memory_consolidated=true --yes
+norn -C "$ATLAS_PATH" set <path> --field-json memory_consolidated=true --yes
 ```
 
 This touches only `memory_consolidated` — never `workspace_consolidated`. The flag
