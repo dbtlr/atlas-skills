@@ -14,9 +14,9 @@ The post-merge ritual. The user merged the working PR in GitHub; get the local r
 `/merged [log] [next]` — the args compose, in any order. Natural-language equivalents count as args too ("…and write the log", "what's next") for harnesses that pass none.
 
 - *(none)* — cleanup only.
-- `log` — after cleanup, invoke the **write-session-log** skill.
-- `next` — after cleanup, start the next task.
-- Both — whatever order given, `log` always runs before `next`. The log memorializes the finished work; starting new work first would bleed it into the record.
+- `log` — after cleanup, invoke the **write-session-log** skill (before the report).
+- `next` — after the report, start the next task.
+- Both — whatever order given, `log` always runs before `next`, with the report between them. The log memorializes the finished work; starting new work first would bleed it into the record.
 
 ## The ritual
 
@@ -57,11 +57,14 @@ Dirty means non-empty `git status --porcelain` — **untracked files included**;
 - `git pull --ff-only origin main`. If ff-only refuses, local main has diverged — stop, show `git log origin/main..main`, and resolve with the user. Never reset to force it.
 - If anything was stashed, `git stash pop`, then summarize what the changes actually are (files and what they do) and ask — keep them sitting in the tree, or commit them to a fresh branch for review as their own PR? A pop conflict is the ugly path: stop, explain the conflict, and resolve it with the user rather than improvising.
 
-### 6. Follow-ons
+### 6. Memorialize — `log`
 
-- `log` → invoke **write-session-log**.
-- `next` → find the next task. In a Mimir-tracked repo (`.mimir.toml`), consult `mimir next`; one clear top task → start it. When the choice isn't obvious — several candidates, or no queue — present the options with enough detail to pick: what each task is, roughly its size, and which is recommended and why.
+If `log` was given, invoke **write-session-log** now, while the report is still ahead — the log closes out the finished work before anything new enters the session.
 
 ### 7. Report
 
-Close with a short summary: PR verified merged (link), branch/worktree deleted, main synced (what came in), anything stashed and popped, and which follow-ons ran.
+Summarize the ritual: PR verified merged (link), branch/worktree deleted, main synced (what came in), anything stashed and popped, and whether the Session Log was written.
+
+### 8. Pick up the next task — `next`
+
+If `next` was given, find the next task after the report is out. In a Mimir-tracked repo (`.mimir.toml`), consult `mimir next`; one clear top task → start it. When the choice isn't obvious — several candidates, or no queue — present the options with enough detail to pick: what each task is, roughly its size, and which is recommended and why.
