@@ -1,8 +1,22 @@
-CLAUDE.local.md
-.claude/settings.local.json
-.atlas.toml
+
 __pycache__/
 *.pyc
-.saga.local.json
-.claude/saga-claude-hook.sh
+
+# Node
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+
+# Worktrees
+.claude/worktrees/
+.worktrees/
+
+# Claude Local Settings
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Agent Settings
 .mcp.json
+
+# Agent Artifacts
+docs/superpowers
