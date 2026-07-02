@@ -14,8 +14,8 @@ If you are about to create a PR, or about to tell the user a change is finished,
 
 | Thought | Reality |
 | --- | --- |
-| "The tests are green" | Green tests are a precondition of review, not a substitute. The canonical run found 2 confirmed bugs in a green 660-test suite. |
-| "It's a tiny diff" | The canonical bugs lived in a ~150-line diff. Small is not safe; the gate decides the tier, not you. |
+| "The tests are green" | Green tests are a precondition of review, not a substitute. The review this skill was distilled from found two confirmed bugs sitting in a fully green 660-test suite. |
+| "It's a tiny diff" | Those two bugs lived in a ~150-line diff. Small is not safe; the gate decides the tier, not you. |
 | "I reviewed it carefully while writing it" | You re-derive your own blind spots. Adversarial means fresh contexts — none carry your session. |
 | "The user is waiting; I'll review after the PR" | The PR **is** the "declaring it done" moment. After never comes. |
 | "It's just a refactor / just docs" | Then say so on the record: run the proportionality gate and let it declare the skip. Silent skips are forbidden, declared ones are one line. |
@@ -27,7 +27,7 @@ If you are about to create a PR, or about to tell the user a change is finished,
 Review is the **last** gate before submit, not a substitute for the earlier ones. Before running it:
 
 - The change is complete and green — build, lint, tests, and any configured verify have passed; a smoke has run if the change has a runtime surface.
-- The diff is **committed on a branch**, so the review target is immutable: `git diff <main>...HEAD`, where `<main>` is resolved (`git symbolic-ref --short refs/remotes/origin/HEAD`), never assumed.
+- The diff is **committed on a branch**, so the review target is immutable: `git diff <main>...HEAD`, where `<main>` is resolved, never assumed: `git symbolic-ref --short refs/remotes/origin/HEAD` — and if that errors (origin/HEAD unset, common in repos wired up with `git remote add`), run `git remote set-head origin --auto` and retry, or probe `git show-ref --verify refs/remotes/origin/main` (then `origin/master`).
 
 If a precondition fails, finish it first — findings against a half-built change waste the whole fan-out.
 
@@ -37,13 +37,13 @@ Two questions, in order. The output is a tier or a declared skip — never silen
 
 **Q1: Did anything that executes — or gates what executes — change?**
 
-If no → **skip, declared**: write the skip trailer (below) and stop. The skip class is deliberately narrow: `docs-only`, `comments-only`, `formatting-only`, `lockfile-only`. If qualifying for a skip needs an argument, the answer is no-skip. Tests, CI/workflow config, lint config, and suppression comments all sit on the **review** side of this line — a weakened test or a disabled rule is a dropped guardrail, the exact failure class this gate exists to catch.
+If no → **skip, declared**: write the skip trailer (below) and stop. The skip class is deliberately narrow: `docs-only`, `comments-only`, `formatting-only` — where `formatting-only` means the diff is the output of the project's configured formatter with no manual edits; the formatter's behavior-preservation guarantee is what earns the skip. If qualifying for a skip needs an argument, the answer is no-skip. A lockfile or dependency bump is **never** a skip — it changes which code executes (supply-chain swaps included); it reviews at `low`. Tests, CI/workflow config, lint config, and suppression comments likewise sit on the **review** side of this line — a weakened test or a disabled rule is a dropped guardrail, the exact failure class this gate exists to catch.
 
 **Q2: What is the blast radius?** Pick the engine tier:
 
 | Diff character | Tier |
 | --- | --- |
-| Mechanical + leaf: rename, copy change, single-file fix with an obvious trigger; tests-only; CI-config-only | `low` |
+| Mechanical + leaf: rename, copy change, single-file fix with an obvious trigger; tests-only; CI-config-only; lockfile/dependency-bump-only | `low` |
 | New behavior, multi-file, or **any deletion/replacement of existing logic** | `high` — the default |
 | Shared infrastructure, data model/migration, security-adjacent, or the change's own claim is "X can no longer happen" | `max` |
 
@@ -53,7 +53,7 @@ If no → **skip, declared**: write the skip trailer (below) and stop. The skip 
 
 ## Step 2 — The suppression scan (deterministic, model-free)
 
-On every non-skipped review, grep the **added lines** of the diff against the pattern list in [references/suppression-scan.md](references/suppression-scan.md) — exact commands there. This hunts **guardrail erosion**: disabled lint rules, type escapes (`as any`, `@ts-ignore`), skipped or narrowed tests (`.skip`, `.only`), coverage pragmas, `#[allow(…)]`. These are one line each; a model lens reading a long diff can miss them, grep cannot.
+On every non-skipped review, run **both scans** in [references/suppression-scan.md](references/suppression-scan.md) — exact commands there: grep the **added lines** of the diff for suppression patterns, and grep the **deleted lines** of test files for removed assertions. This hunts **guardrail erosion**: disabled lint rules, type escapes (`as any`, `@ts-ignore`), skipped or narrowed tests (`.skip`, `.only`), coverage pragmas, `#[allow(…)]`. These are one line each; a model lens reading a long diff can miss them, grep cannot.
 
 **A hit is a mandatory finding, not a ban.** Legitimate escapes exist (`@ts-expect-error` on a test asserting a type error; `#[allow(dead_code)]` during staged build-out). Every hit enters the resolution loop and ends in a terminal state like any other finding — removed (fixed), justified on the record (dismissed), or tracked (deferred). The agent that sneaks in an `as any` isn't blocked; it's forced to say so in the PR body.
 
@@ -64,14 +64,16 @@ Select by harness self-identity (the first line of your system prompt):
 | Harness | Engine |
 | --- | --- |
 | Claude Code | Invoke the `/code-review` skill at the gate's tier (`low` / `high` / `max` effort) |
-| Codex | Trigger `/review` — phrase the request as "review changes on `<branch>` against `<base>`" |
-| Anything else | Subagents available → the portable fallback fan-out; none → the inline fallback (below) |
+| Codex | `/review` is user-invoked — the model cannot trigger it. Ask the user to run it (a request worded "review changes on `<branch>` against `<base>`" routes to it); if no user is available, use the portable fallback |
+| Anything else | Subagents available → the portable fallback; none → the inline fallback (both below) |
 
 Rules that hold for every engine:
 
 - Reviewers see the **committed diff**, in **fresh contexts** — none carry the builder's session. Freshness is the property that makes the review adversarial rather than confirmatory.
 - Reviewers inherit the session model. A review is exactly the place not to economize.
 - Every finding must arrive as a claim plus evidence: `{file, line, summary, failure_scenario}` with a verdict (`CONFIRMED` — inputs and wrong output named; `PLAUSIBLE` — real mechanism, uncertain trigger). Agents hand each other claims plus evidence, never conclusions alone.
+
+**Portable fallback** (no native engine, subagents available) — a compressed fan-out the controller runs directly. Three finder subagents in fresh contexts over the committed diff, one lens each: *diff-local correctness* (line-by-line "what input/state makes this wrong", plus the removed-behavior audit — for every deleted line, name the invariant it enforced and find where the new code re-establishes it), *cross-file tracer* (callers and callees of every changed function — new preconditions, changed return shapes, broken call sites), and *batched cleanup* (reuse, simplification, convention violations with the rule quoted). Finders over-surface: every candidate with a nameable failure scenario passes through in the record shape above — precision is the verifier's job. Then independent verifier subagents that did **not** find the candidates, grouped by file, return CONFIRMED / PLAUSIBLE / REFUTED per candidate — refuting requires constructible proof (quote the guarding line); a candidate with no verdict is dropped, never passed through. The controller ranks survivors: correctness over cleanup, CONFIRMED over PLAUSIBLE.
 
 **Inline fallback** (no native engine, no subagents) — an honest single-context review, weaker and said so: work from the raw `git diff` output rather than session memory; walk the lenses as separate sequential passes (line-by-line failure hunt → removed-behavior audit → cross-file caller/callee trace → batched cleanup); always include the removed-behavior lens — for every deleted line, name the invariant it enforced and find where the new code re-establishes it. Reading the diff backwards is the one move that structurally fights self-review bias. Emit findings in the same record shape.
 
@@ -121,10 +123,10 @@ One source of truth, two forms.
 
 ```
 Adversarial-Review: run engine=<engine> tier=<low|high|max> findings=<N> fixed=<N> dismissed=<N> deferred=<N>[(<TASK-ID>[,<TASK-ID>…])]
-Adversarial-Review: skipped reason=<docs-only|comments-only|formatting-only|lockfile-only>
+Adversarial-Review: skipped reason=<docs-only|comments-only|formatting-only>
 ```
 
-- `engine` ∈ `code-review` | `review` | `fallback-high` | `fallback-low` | `inline`.
+- `engine` ∈ `code-review` | `review` | `fallback` | `inline`. Engine and tier are orthogonal: `engine` names the machinery, `tier=` records the gate's output whatever the machinery — a `max`-tier fallback review is `engine=fallback tier=max`.
 - `findings` counts survivors reaching resolution (engine findings + suppression hits); `fixed + dismissed + deferred = findings`.
 - Every deferral names its task id in the parens — that's the audit trail.
 - The trailer rides the commit that closes the review: the fix commit when there is one, otherwise an empty record commit (`git commit --allow-empty`). Never amend pushed commits. Multiple trailers on a branch are fine (amended reviews append); **the latest wins**.
@@ -136,7 +138,7 @@ Adversarial-Review: skipped reason=<docs-only|comments-only|formatting-only|lock
 | --- | --- | --- | --- |
 | 1 | Archive bypass writes cycle (store.rs:214) | CONFIRMED | Fixed — regression test `test_unarchive_rejects_cycle` (red→green) |
 | 2 | Guard belongs at shared seam (edges.rs:88) | PLAUSIBLE | Dismissed — the helper IS the seam; only two verbs write edges |
-| 3 | Unarchive skips cycle check | PLAUSIBLE | Deferred → ATSK-31 (bounded: pre-guard legacy data only) |
+| 3 | Unarchive skips cycle check | PLAUSIBLE | Deferred → TASK-123 (bounded: pre-guard legacy data only) |
 ```
 
 Presenting this table to the human is the skill's terminal act — the "presented to a human" half of the rule. **"Done" may be declared only after the table is presented.**
