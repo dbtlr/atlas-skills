@@ -5,7 +5,7 @@ Atlas Skills teaches an agent to run a working **Session** — a body of work wi
 single through-line, from session start to session log — backed by a markdown
 knowledge vault and by **Mimir** for work tracking.
 
-## The five skills
+## The six skills
 
 | Skill | What it does |
 | --- | --- |
@@ -14,12 +14,14 @@ knowledge vault and by **Mimir** for work tracking.
 | `write-session-log` | At a work boundary, writes the merged **Session Log** memorializing what happened — decisions, deviations, and Consolidation Candidates. |
 | `consolidate-workspace` | Consolidates the bound workspace's Session Logs — lifts durable knowledge into the workspace (Brief / decisions / notes) and follow-ups into Mimir, marks each log via norn, and grooms the Brief back to small. |
 | `consolidate-memory` | (Global) regenerates the shared `user.md` / `memory.md` from user-observation candidates across **all** workspaces' Session Logs. The cross-project counterpart to `consolidate-workspace`. |
+| `merged` | The post-merge ritual. After a PR is merged in GitHub, verifies the merge landed, returns to an up-to-date main, and deletes the finished branch/worktree. Composable args — `log` writes the Session Log, `next` picks up the next task (`log` always runs first). |
 
 ## Requirements
 
 - **`ATLAS_PATH`** — set this to your atlas vault root (e.g. `export ATLAS_PATH=~/vaults/atlas`). The skills read and write the vault there; the vault is always the atlas vault.
 - **Python 3.11+** for `build_primer.py` (stdlib `tomllib`), or the `tomli` package on older interpreters.
 - **Mimir** (optional) — the `mimir` CLI, for repos that track work in Mimir. When a repo has a `.mimir.toml`, the primer folds `mimir next` into the Session Primer.
+- **GitHub CLI** (`gh`, authenticated) — for the `merged` skill, which verifies a PR actually merged before deleting anything.
 
 ## Install
 
@@ -34,7 +36,7 @@ npx skills add dbtlr/atlas-skills --skill '*'
 Refresh an existing install after changes:
 
 ```bash
-npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory -g -y
+npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory merged -g -y
 ```
 
 Once installed, a primary session starts with:
@@ -58,7 +60,7 @@ Workspace well-formed.
 
 ## Repository layout
 
-- `skills/` — the five skill sources, each self-contained (its `build_primer.py`, `resources/`, `references/`, `templates/` co-located inside it).
+- `skills/` — the six skill sources, each self-contained (any `build_primer.py`, `resources/`, `references/`, `templates/` it needs co-located inside it).
 - `skills/start-session/build_primer.py` — resolves the `.atlas.toml` binding and `$ATLAS_PATH` into the merged Active Context, folding in `mimir next` when present.
 - `tests/` — primer-merge tests (stdlib `unittest`).
 
