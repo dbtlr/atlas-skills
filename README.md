@@ -16,6 +16,11 @@ knowledge vault and by **Mimir** for work tracking.
 | `consolidate-memory` | (Global) regenerates the shared `user.md` / `memory.md` from user-observation candidates across **all** workspaces' Session Logs. The cross-project counterpart to `consolidate-workspace`. |
 | `merged` | The post-merge ritual. After a PR is merged in GitHub, verifies the merge landed, returns to an up-to-date main, and deletes the finished branch/worktree. Composable args — `log` writes the Session Log, `next` picks up the next task (`log` always runs first). |
 
+Two typing-saver aliases install alongside them: **`/start`** → `start-session`
+and **`/end`** → `write-session-log`. They're thin wrappers, not additional
+skills — user-invoked only in Claude Code (`disable-model-invocation`); on other
+harnesses they simply redirect to the real skill.
+
 ## Requirements
 
 - **`ATLAS_PATH`** — set this to your atlas vault root (e.g. `export ATLAS_PATH=~/vaults/atlas`). The skills read and write the vault there; the vault is always the atlas vault.
@@ -36,7 +41,7 @@ npx skills add dbtlr/atlas-skills --skill '*'
 Refresh an existing install after changes:
 
 ```bash
-npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory merged -g -y
+npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory merged start end -g -y
 ```
 
 Once installed, a primary session starts with:
@@ -44,6 +49,8 @@ Once installed, a primary session starts with:
 ```
 /start-session
 ```
+
+(or its shorthand, `/start`)
 
 `start-session` is also the recovery point after a context clear/reset: it
 reloads the Session Primer for the same body of work before the agent continues.
