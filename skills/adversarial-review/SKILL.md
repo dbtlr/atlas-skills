@@ -45,9 +45,9 @@ If no → **skip, declared**: write the skip trailer (below) and stop. The skip 
 | --- | --- |
 | Mechanical + leaf: rename, copy change, single-file fix with an obvious trigger; tests-only; CI-config-only; lockfile/dependency-bump-only | `low` |
 | New behavior, multi-file, or **any deletion/replacement of existing logic** | `high` — the default |
-| Shared infrastructure, data model/migration, security-adjacent, or the change's own claim is "X can no longer happen" | `max` |
+| Shared infrastructure, data model/migration, security-adjacent, or the change claims an invariant whose failure would be **costly or hard to reverse** — corrupted data, a crossed security boundary, wrong behavior shipping silently | `max` |
 
-**Doubt rounds up.** Between two tiers, take the higher.
+**Doubt rounds up.** Between two tiers, take the higher — but **escalation is earned by the blast radius of the claim failing, not by the claim's phrasing.** A change whose claim sounds absolute ("this can no longer happen") but which *fails cheap and loud* — enforcement, tooling, a fail-open guard where a bypass costs one recoverable, visible mistake — reviews at `high`, not `max`. Reserve `max` for where a false claim corrupts data, crosses a security boundary, or ships wrong behavior silently.
 
 **Re-review is this same gate, re-applied to the delta.** After follow-up work on an already-reviewed branch, run Q1/Q2 against the diff since the last review: "changed a sentence of copy" → no re-review; "moved files and re-composed functions" → amended review at the tier the delta earns. An amended review appends a new trailer; the latest trailer on the branch is the one that counts.
 
@@ -145,4 +145,4 @@ Presenting this table to the human is the skill's terminal act — the "presente
 
 ## Enforcement (optional hardening)
 
-On harnesses with hooks, a PreToolUse hook on `gh pr create` can grep the branch for the trailer and block PR creation when it's absent — making a forgotten gate structurally impossible rather than merely discouraged. The hook and its install doc ship in `resources/hooks/` when present; the skill is complete without it — the trailer convention is the contract, the hook just enforces it.
+On harnesses with hooks, a PreToolUse hook on `gh pr create` can grep the branch for the trailer and block PR creation when it's absent — catching the common forgotten-gate case (an agent about to open a PR without having run the review). It's a speed bump, not an adversarial boundary: a fail-open hook can't stop deliberate evasion, and doesn't try. The hook and its install doc live in [resources/hooks/](resources/hooks/README.md); the skill is complete without it — the trailer convention is the contract, the hook just makes the common miss loud.
