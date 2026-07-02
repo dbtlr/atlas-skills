@@ -45,26 +45,30 @@ Use `gh`, never `git branch --merged` — squash and rebase merges rewrite the c
 
 Dirty means non-empty `git status --porcelain` — **untracked files included**; a brand-new file that never made the PR is exactly the thing this gate protects. If dirty, stop and show the changes. Uncommitted work on a merged branch usually means something didn't make it into the PR — deleting the branch or worktree would silently destroy it. Let the user decide: discard, or carry along to main (carry = `git stash push -u`, which then rides the step 5 pop-and-review path).
 
-### 4. Return to main and delete the branch
+### 4. Close the task in Mimir
+
+In a Mimir-tracked repo (`.mimir.toml`), mark the task this PR carried as done — `mimir done <id>`; the user merging the PR *is* the approval. Do it now, while the branch still identifies the work — after cleanup nothing points back at it. If the task isn't obvious from session context or the branch/PR, ask rather than close the wrong one. No Mimir, or no task in flight → skip.
+
+### 5. Return to main and delete the branch
 
 - **Plain branch** — `git switch main`, then `git branch -d <branch>`; fall back to `-D` when `-d` refuses (expected after squash/rebase — step 2 already proved these exact commits landed).
 - **Worktree** — move back to the main checkout, `git worktree remove <path>`, then delete the branch as above. If the remove refuses, that's a red flag, not a prompt to `--force`: something is still in the tree that steps 1–3 didn't account for — show the user what's there.
 - `git fetch --prune` — GitHub usually auto-deletes the remote branch on merge; prune the stale tracking ref. If the remote branch survived, remove it with `git push origin --delete <branch>`.
 
-### 5. Sync main
+### 6. Sync main
 
 - If main's working tree is dirty, stash first — `git stash push -u -m "merged/pre-pull"` (`-u`: an untracked file the pull wants to write would otherwise abort it).
 - `git pull --ff-only origin main`. If ff-only refuses, local main has diverged — stop, show `git log origin/main..main`, and resolve with the user. Never reset to force it.
 - If anything was stashed, `git stash pop`, then summarize what the changes actually are (files and what they do) and ask — keep them sitting in the tree, or commit them to a fresh branch for review as their own PR? A pop conflict is the ugly path: stop, explain the conflict, and resolve it with the user rather than improvising.
 
-### 6. Memorialize — `log`
+### 7. Memorialize — `log`
 
 If `log` was given, invoke **write-session-log** now, while the report is still ahead — the log closes out the finished work before anything new enters the session.
 
-### 7. Report
+### 8. Report
 
-Summarize the ritual: PR verified merged (link), branch/worktree deleted, main synced (what came in), anything stashed and popped, and whether the Session Log was written.
+Summarize the ritual: PR verified merged (link), Mimir task closed, branch/worktree deleted, main synced (what came in), anything stashed and popped, and whether the Session Log was written.
 
-### 8. Pick up the next task — `next`
+### 9. Pick up the next task — `next`
 
 If `next` was given, find the next task after the report is out. In a Mimir-tracked repo (`.mimir.toml`), consult `mimir next`; one clear top task → start it. When the choice isn't obvious — several candidates, or no queue — present the options with enough detail to pick: what each task is, roughly its size, and which is recommended and why.
