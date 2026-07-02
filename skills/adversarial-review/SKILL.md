@@ -49,6 +49,8 @@ If no → **skip, declared**: write the skip trailer (below) and stop. The skip 
 
 **Doubt rounds up.** Between two tiers, take the higher — but **escalation is earned by the blast radius of the claim failing, not by the claim's phrasing.** A change whose claim sounds absolute ("this can no longer happen") but which *fails cheap and loud* — enforcement, tooling, a fail-open guard where a bypass costs one recoverable, visible mistake — reviews at `high`, not `max`. Reserve `max` for where a false claim corrupts data, crosses a security boundary, or ships wrong behavior silently.
 
+**Size caps width.** The tier sets *depth*; the diff's *size* caps how wide the fan-out should go. Lens partitioning across many agents exists to beat per-lens attention saturation — which doesn't happen on a small surface, where a few strong reviewers exhaust the findings and extra agents just re-read the same lines. So on a diff under ~200 changed lines, cap at `high` even when character argues for `max`; under ~50 lines mechanical, `low` is usually enough. Widen for large diffs, not small ones — model tier stays strong (a review is not the place to economize on model quality), but agent *count* scales with surface area, not with how alarming the change sounds. On the native engine this means picking a lower effort tier for a small diff; on the fallback ([references/fallback-engine.md](references/fallback-engine.md)) it sets the finder count directly.
+
 **Re-review is this same gate, re-applied to the delta.** After follow-up work on an already-reviewed branch, run Q1/Q2 against the diff since the last review: "changed a sentence of copy" → no re-review; "moved files and re-composed functions" → amended review at the tier the delta earns. An amended review appends a new trailer; the latest trailer on the branch is the one that counts.
 
 ## Step 2 — The suppression scan (deterministic, model-free)
@@ -64,8 +66,8 @@ Select by harness self-identity (the first line of your system prompt):
 | Harness | Engine |
 | --- | --- |
 | Claude Code | Invoke the `/code-review` skill at the gate's tier (`low` / `high` / `max` effort) |
-| Codex | `/review` is user-invoked — the model cannot trigger it. Ask the user to run it (a request worded "review changes on `<branch>` against `<base>`" routes to it); if no user is available, use the portable fallback |
-| Anything else | Subagents available → the portable fallback; none → the inline fallback (both below) |
+| Codex | `/review` is user-invoked — the model cannot trigger it. Ask the user to run it (a request worded "review changes on `<branch>` against `<base>`" routes to it); if no user is available, drop to the fallback engine by capability (below) |
+| Anything else | Subagents available → **fallback**; none → **inline** — both specified in [references/fallback-engine.md](references/fallback-engine.md) |
 
 Rules that hold for every engine:
 
@@ -73,9 +75,7 @@ Rules that hold for every engine:
 - Reviewers inherit the session model. A review is exactly the place not to economize.
 - Every finding must arrive as a claim plus evidence: `{file, line, summary, failure_scenario}` with a verdict (`CONFIRMED` — inputs and wrong output named; `PLAUSIBLE` — real mechanism, uncertain trigger). Agents hand each other claims plus evidence, never conclusions alone.
 
-**Portable fallback** (no native engine, subagents available) — a compressed fan-out the controller runs directly. Three finder subagents in fresh contexts over the committed diff, one lens each: *diff-local correctness* (line-by-line "what input/state makes this wrong", plus the removed-behavior audit — for every deleted line, name the invariant it enforced and find where the new code re-establishes it), *cross-file tracer* (callers and callees of every changed function — new preconditions, changed return shapes, broken call sites), and *batched cleanup* (reuse, simplification, convention violations with the rule quoted). Finders over-surface: every candidate with a nameable failure scenario passes through in the record shape above — precision is the verifier's job. Then independent verifier subagents that did **not** find the candidates, grouped by file, return CONFIRMED / PLAUSIBLE / REFUTED per candidate — refuting requires constructible proof (quote the guarding line); a candidate with no verdict is dropped, never passed through. The controller ranks survivors: correctness over cleanup, CONFIRMED over PLAUSIBLE.
-
-**Inline fallback** (no native engine, no subagents) — an honest single-context review, weaker and said so: work from the raw `git diff` output rather than session memory; walk the lenses as separate sequential passes (line-by-line failure hunt → removed-behavior audit → cross-file caller/callee trace → batched cleanup); always include the removed-behavior lens — for every deleted line, name the invariant it enforced and find where the new code re-establishes it. Reading the diff backwards is the one move that structurally fights self-review bias. Emit findings in the same record shape.
+**Fallbacks** (no native engine) — the controller runs the review itself, at the same contract (verdict ladder, JSON record shape). With subagents it's a compressed fresh-context fan-out (**fallback**) — size-scaled finder counts, verifier grouping, deterministic assembly; with none it's an honest single-context sequential pass (**inline**), weaker and said so. Both are specified — prompts and all — in [references/fallback-engine.md](references/fallback-engine.md). The **Codex** row above also drops here when no user is available to run `/review`.
 
 ## Step 4 — The resolution loop
 
