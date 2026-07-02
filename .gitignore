@@ -3,3 +3,6 @@ CLAUDE.local.md
 .atlas.toml
 __pycache__/
 *.pyc
+.saga.local.json
+.claude/saga-claude-hook.sh
+.mcp.json
