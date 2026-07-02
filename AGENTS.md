@@ -43,9 +43,10 @@ the repo has a `.mimir.toml` and `mimir` is on PATH. Prints
 
 ## Editing skills
 
-Skills live in `skills/` — one real directory. The five: `start-session`,
-`initialize-atlas`, `write-session-log`, `consolidate-workspace`, `consolidate-memory`. Each carries its
-own `resources/`, `references/`, and `templates/` co-located inside it, so the
+Skills live in `skills/` — one real directory. The six: `start-session`,
+`initialize-atlas`, `write-session-log`, `consolidate-workspace`,
+`consolidate-memory`, `merged`. Each keeps whatever `resources/`, `references/`,
+and `templates/` it needs co-located inside it, so the
 skill is self-contained wherever it's installed. They're discovered by Claude
 Code and Codex, and installed cross-harness by the `skills` CLI
 (`npx skills add …`), which symlinks them into `~/.agents/skills/`.
