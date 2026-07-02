@@ -145,4 +145,4 @@ Presenting this table to the human is the skill's terminal act — the "presente
 
 ## Enforcement (optional hardening)
 
-On harnesses with hooks, a PreToolUse hook on `gh pr create` can grep the branch for the trailer and block PR creation when it's absent — making a forgotten gate structurally impossible rather than merely discouraged. The hook and its install doc ship in `resources/hooks/` when present; the skill is complete without it — the trailer convention is the contract, the hook just enforces it.
+On harnesses with hooks, a PreToolUse hook on `gh pr create` can grep the branch for the trailer and block PR creation when it's absent — making a forgotten gate structurally impossible rather than merely discouraged. The hook and its install doc live in [resources/hooks/](resources/hooks/README.md); the skill is complete without it — the trailer convention is the contract, the hook just enforces it.
