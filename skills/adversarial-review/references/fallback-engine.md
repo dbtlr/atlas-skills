@@ -40,10 +40,12 @@ Model tier stays strong for every agent; only the *count* scales with surface ar
 
 | Diff size | Correctness finders | Cleanup finder |
 | --- | --- | --- |
-| ≲ 50 lines, mechanical | 1 (combined correctness) | fold into the same agent |
+| under ~50 lines | 1 (combined correctness) | fold into the same agent |
 | ~50–200 lines | 2 (diff-local; cross-file) | 1 |
 | ~200–600 lines | 3 (diff-local; removed-behavior; cross-file) | 1 |
-| 600+ lines | 3 + a gap-sweep (shown all found, hunts only what's missing) | 1 |
+| over ~600 lines | 3 + a gap-sweep (shown all found, hunts only what's missing) | 1 |
+
+The bands are by size alone and exhaustive — a small non-mechanical diff still gets the single combined correctness finder, which holds every lens at once because the surface is small enough not to saturate its attention.
 
 Partition correctness, batch cleanup: correctness recall degrades when one agent juggles lenses on a large diff, so it gets dedicated agents as the diff grows; cleanup findings are cheaper to miss and share one agent.
 
@@ -51,7 +53,9 @@ Partition correctness, batch cleanup: correctness recall degrades when one agent
 
 Every finder gets the shared scope block, then its lens. Common instruction:
 
-> You are a code-review finder. Read only the committed diff (`<diff command>`) and the files it touches. **Over-surface:** pass through every candidate you can attach a concrete failure scenario to — do not self-censor half-believed ones; an independent verifier judges them next, precision is its job. Emit each as `{file, line, summary, failure_scenario}` — `failure_scenario` is the user-visible consequence (wrong output, crash, data loss), never an intermediate state. Cap ~6–8 candidates.
+> You are a code-review finder. Read only the committed diff (`<diff command>`) and the files it touches. **Over-surface:** pass through every candidate you can attach a concrete failure scenario to — do not self-censor half-believed ones; an independent verifier judges them next, precision is its job. Emit each as `{file, line, summary, failure_scenario}` — `failure_scenario` is the user-visible consequence (wrong output, crash, data loss), never an intermediate state.
+
+The over-surface guard has no finder-side ceiling — never drop a real candidate to hit a number; precision is the verifier's job, not the finder's. If a single finder is surfacing well past ~8 candidates, that's a signal the diff is too large for its band: escalate a size tier (more finders, and the gap-sweep at the top band backstops recall) rather than letting one finder silently shed the overflow.
 
 - **diff-local correctness:** "For each changed hunk, ask what input, state, or timing makes this line wrong — inverted conditions, off-by-one, missing await, null deref, swallowed errors, boundary/zero/empty. Include the **removed-behavior audit**: for every deleted or replaced line, name the invariant it enforced, then find where the new code re-establishes it — a deletion with no re-establishment is a finding."
 - **cross-file tracer:** "Leave the diff. For every changed function, read its callers and callees: new preconditions the callers don't meet, changed return shapes, broken call sites, contracts silently altered. This is the only lens that catches integration breaks."
@@ -73,7 +77,7 @@ Verifiers that can *execute* (drive the CLI, run the test) produce the strongest
 
 ### Assembly (controller, deterministic)
 
-Drop no-verdict candidates. Merge same-root-cause duplicates by index. Rank most-severe-first: correctness over cleanup, CONFIRMED over PLAUSIBLE. Escalate a merged finding's verdict if any member was CONFIRMED. Hand the ranked survivors — each still carrying file/line/failure-scenario/verdict/evidence — to the resolution loop (SKILL.md Step 4).
+Keep only CONFIRMED and PLAUSIBLE survivors — drop every REFUTED candidate and every no-verdict candidate (a verifier that died or skipped an index). Only survivors reach the resolution loop, which has a terminal state for CONFIRMED and PLAUSIBLE but none for REFUTED. Merge same-root-cause duplicates by index. Rank most-severe-first: correctness over cleanup, CONFIRMED over PLAUSIBLE. Escalate a merged finding's verdict if any member was CONFIRMED. Hand the ranked survivors — each still carrying file/line/failure-scenario/verdict/evidence — to the resolution loop (SKILL.md Step 4).
 
 ## inline mode (no subagents)
 

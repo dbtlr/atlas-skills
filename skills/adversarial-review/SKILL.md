@@ -66,8 +66,8 @@ Select by harness self-identity (the first line of your system prompt):
 | Harness | Engine |
 | --- | --- |
 | Claude Code | Invoke the `/code-review` skill at the gate's tier (`low` / `high` / `max` effort) |
-| Codex | `/review` is user-invoked — the model cannot trigger it. Ask the user to run it (a request worded "review changes on `<branch>` against `<base>`" routes to it); if no user is available, use the portable fallback |
-| Anything else | Subagents available → the portable fallback; none → the inline fallback (both below) |
+| Codex | `/review` is user-invoked — the model cannot trigger it. Ask the user to run it (a request worded "review changes on `<branch>` against `<base>`" routes to it); if no user is available, drop to the fallback engine by capability (below) |
+| Anything else | Subagents available → **fallback**; none → **inline** — both specified in [references/fallback-engine.md](references/fallback-engine.md) |
 
 Rules that hold for every engine:
 
@@ -75,7 +75,7 @@ Rules that hold for every engine:
 - Reviewers inherit the session model. A review is exactly the place not to economize.
 - Every finding must arrive as a claim plus evidence: `{file, line, summary, failure_scenario}` with a verdict (`CONFIRMED` — inputs and wrong output named; `PLAUSIBLE` — real mechanism, uncertain trigger). Agents hand each other claims plus evidence, never conclusions alone.
 
-**Fallbacks** (no native engine) — the controller runs the review itself, at the same contract. With subagents it's a compressed fresh-context fan-out (**fallback**); with none it's an honest single-context sequential pass (**inline**), weaker and said so. Both are fully specified — prompts, finder counts, verifier grouping, JSON record shape — in [references/fallback-engine.md](references/fallback-engine.md). The **Codex** row above also routes here when no user is available to run `/review`.
+**Fallbacks** (no native engine) — the controller runs the review itself, at the same contract (verdict ladder, JSON record shape). With subagents it's a compressed fresh-context fan-out (**fallback**) — size-scaled finder counts, verifier grouping, deterministic assembly; with none it's an honest single-context sequential pass (**inline**), weaker and said so. Both are specified — prompts and all — in [references/fallback-engine.md](references/fallback-engine.md). The **Codex** row above also drops here when no user is available to run `/review`.
 
 ## Step 4 — The resolution loop
 
