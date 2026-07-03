@@ -25,6 +25,7 @@ Requires Python 3 and `git` on PATH. Stdlib only.
            "hooks": [
              {
                "type": "command",
+               "if": "Bash(gh *)",
                "command": "$HOME/.agents/skills/adversarial-review/resources/hooks/check-adversarial-review.py",
                "timeout": 10
              }
@@ -34,6 +35,8 @@ Requires Python 3 and `git` on PATH. Stdlib only.
      }
    }
    ```
+
+   The **`if: "Bash(gh *)"`** scopes the hook to `gh` commands, so the script only spawns when you actually call GitHub — not on every Bash tool call. It strips leading `VAR=value` and inspects subcommands in compound commands, so it's a reliable pre-filter; the script still self-checks that the segment is a PR creation. (Omit `if` if your Claude Code build predates the field — the script self-filters correctly either way, just less cheaply.)
 
 3. Restart Claude Code — hooks load at session start and never hot-swap. Confirm with `/hooks`.
 
