@@ -15,7 +15,7 @@ If you are about to tell the user a task is **done**, about to run **`gh pr crea
 | Thought | Reality |
 | --- | --- |
 | "It's obviously finished, I'll just open the PR" | Opening the PR *is* declaring it done. The workflow runs first, not after. |
-| "The change is small — straight to main" | A push to main is the least reversible step there is. It gets verified, not waved through. |
+| "The change is small — I'll just push to main" | Never push or merge to the main branch — all work ships as a PR. Small changes get a PR and a review too. |
 | "I'll review it after I put the PR up" | After the PR is up, the human is already looking. Verify before you present, not after. |
 | "I already read it over as I wrote it" | You re-derive your own blind spots. Verification is adversarial and fresh-context — that's `adversarial-review`, not self-review. |
 | "This is just a doc/config tweak" | Then `adversarial-review`'s own proportionality gate will say so in one line. Let *it* decide the tier or the skip. |
@@ -29,11 +29,12 @@ Walk it in order. Each gate stops the task from "finishing" on a wrong assumptio
 
 If the task isn't complete — tests not written, a TODO still open, the feature only half-built — **STOP here.** Finishing-a-task is the *last* step, not a way to skip the work. Come back when the change is genuinely done and its own gates (build, lint, tests, a smoke if it has a runtime surface) are green.
 
-### 2. How is the change leaving your hands?
+### 2. Are you opening a PR?
+
+All work ships as a PR — **never a direct push or merge to the main branch.** So:
 
 - **Creating a PR for the user to review** → go to step 3.
-- **Merging a feature branch to main, or pushing changes applied directly to main** → same: go to step 3. Direct-to-main is *more* exposed than a PR, not less — it gets verified too.
-- **Neither** (still local, not sharing yet) → there's nothing to finish; STOP.
+- **Not yet — still local, not sharing** → there's nothing to finish; come back when you are.
 
 ### 3. Verify — run `adversarial-review` to completion
 
@@ -43,9 +44,9 @@ Invoke the **`adversarial-review`** skill and let it finish. It runs its proport
 
 ### 4. Present and open the PR
 
-Create the PR (`gh pr create`) with the disposition table in its body — the review's outcome is part of what you're presenting to the human. This is the "presented to a human" half of the rule.
+Create the PR (`gh pr create`), carrying **adversarial-review's disposition table into the body** — the review's outcome is part of what you present to the human. This is where adversarial-review's "table in the PR body" actually happens: it produced and presented the table in chat at step 3; you place it in the body here. This is the "presented to a human" half of the rule.
 
-(If the path was a direct push/merge to main rather than a PR, the trailer on the commits *is* the record; there's no watch to hand off to — you're done after step 3.)
+(For a **declared skip**, adversarial-review produced only a skip trailer and no table — put the skip reason in the PR body instead.)
 
 ### 5. Hand off to `watching-a-pr`
 
@@ -53,7 +54,7 @@ Once the PR is open, invoke **`watching-a-pr`** with the PR number. It arms the 
 
 ## What this skill composes
 
-- **`adversarial-review`** — the verification step (3). Owns the review engine, resolution loop, and trailer.
+- **`adversarial-review`** — the verification step (3), **not a parallel gate**. Both fire at "about to `gh pr create`"; when you're finishing a task, start *here* and let this workflow invoke it. Reaching for `adversarial-review` directly still verifies the change, but skips the finish sequence — the PR presentation (4) and the watch hand-off (5). It owns the review engine, resolution loop, and trailer.
 - **`watching-a-pr`** — the post-open loop (5). Owns the watcher, CI/comment routing, and the merge hand-off to `merged`.
 - **`merged`** — invoked by `watching-a-pr` on merge; not called directly here.
 
