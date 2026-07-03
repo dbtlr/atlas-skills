@@ -42,9 +42,11 @@ Invoke the **`adversarial-review`** skill and let it finish. It runs its proport
 
 **Do not continue past this step until that trailer exists on the branch.** The trailer is the proof the work was verified; it's what the pre-PR hook (when present) checks, and it's what makes "done" honest. If review surfaced fixes, they're part of the change now — re-run the earlier gates it may have invalidated.
 
-### 4. Present and open the PR
+### 4. Open the PR — opening it *is* the presentation
 
-Create the PR (`gh pr create`), carrying **adversarial-review's disposition table into the body** — the review's outcome is part of what you present to the human. This is where adversarial-review's "table in the PR body" actually happens: it produced and presented the table in chat at step 3; you place it in the body here. This is the "presented to a human" half of the rule.
+When `adversarial-review` returns, **continue straight through and open the PR in the same turn.** Do not stop to ask whether to open it, and do not offer to let the human review the code first — **the PR is the review surface.** Opening it is how the change is "presented to a human"; it is not a step that needs approval. (Merging the PR stays with the human; opening it does not.)
+
+Create the PR (`gh pr create`), carrying **adversarial-review's disposition table into the body** — the review's outcome is part of what's presented. adversarial-review produced and presented that table in chat at step 3; you place it in the body here.
 
 (For a **declared skip**, adversarial-review produced only a skip trailer and no table — put the skip reason in the PR body instead.)
 

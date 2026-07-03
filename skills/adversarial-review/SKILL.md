@@ -141,7 +141,7 @@ Adversarial-Review: skipped reason=<docs-only|comments-only|formatting-only>
 | 3 | Unarchive skips cycle check | PLAUSIBLE | Deferred → TASK-123 (bounded: pre-guard legacy data only) |
 ```
 
-Presenting this table to the human is the skill's terminal act — the "presented to a human" half of the rule. **"Done" may be declared only after the table is presented.**
+Presenting this table to the human is the terminal act of a **standalone** review — the "presented to a human" half of the rule when the review was run on its own. **"Done" may be declared only after the table is presented.** When this skill runs *inside* `finishing-a-task`, presenting the table is a checkpoint the flow passes through, not a stop: continue on to open the PR (that skill's step 4) in the same turn, without pausing for approval.
 
 ## Enforcement (optional hardening)
 
