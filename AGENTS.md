@@ -51,4 +51,23 @@ Skills live in `skills/` — one real directory. The ten: `start-session`,
 and `templates/` it needs co-located inside it, so the
 skill is self-contained wherever it's installed. They're discovered by Claude
 Code and Codex, and installed cross-harness by the `skills` CLI
-(`npx skills add …`), which symlinks them into `~/.agents/skills/`.
+(`npx skills add …`) into `~/.agents/skills/`.
+
+## Keeping installed skills live
+
+Installs land as **copies** under `~/.agents/skills/`, not symlinks back to this
+repo — deliberately, so other sessions keep running the last-installed version
+and never pick up mid-flight edits from a working tree. The cost is that a merge
+isn't live until you re-copy.
+
+So after the `merged` ritual pulls a PR into local `main`, refresh the
+globally-installed copies so the merged changes go live:
+
+```bash
+npx skills add dbtlr/atlas-skills --all -g   # add/refresh all skills globally
+# or, to update skills already installed:
+npx skills update -g
+```
+
+`add --all` is the safe default — it also picks up newly added or renamed
+skills, which `update` alone won't.
