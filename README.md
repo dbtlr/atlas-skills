@@ -5,7 +5,7 @@ Atlas Skills teaches an agent to run a working **Session** — a body of work wi
 single through-line, from session start to session log — backed by a markdown
 knowledge vault and by **Mimir** for work tracking.
 
-## The seven skills
+## The eight skills
 
 | Skill | What it does |
 | --- | --- |
@@ -16,6 +16,7 @@ knowledge vault and by **Mimir** for work tracking.
 | `consolidate-memory` | (Global) regenerates the shared `user.md` / `memory.md` from user-observation candidates across **all** workspaces' Session Logs. The cross-project counterpart to `consolidate-workspace`. |
 | `merged` | The post-merge ritual. After a PR is merged in GitHub, verifies the merge landed, returns to an up-to-date main, and deletes the finished branch/worktree. Composable args — `log` writes the Session Log, `next` picks up the next task (`log` always runs first). |
 | `adversarial-review` | The verification gate before a PR: a proportionality gate (or declared skip), a deterministic suppression scan, review delegated to the harness's native engine (`/code-review`, `/review`, or a fallback), then the resolution loop — every finding fixed, dismissed with a reason, or deferred to a tracked task, recorded as a disposition trailer + table. Vault-independent — general engineering craft on the same install pipeline. |
+| `watching-a-pr` | The engagement loop around an open PR: arms a stateless background watcher (`pr_watcher.py`), then on each wake routes the batch it returns — addresses inline review comments, fixes red CI, announces green — and re-arms, until the PR merges (runs the `merged` cleanup + reconciles stragglers) or the watch times out. Part of the forthcoming `finishing-a-task` workflow; vault-independent. |
 
 Two typing-saver aliases install alongside them: **`/start`** → `start-session`
 and **`/end`** → `write-session-log`. They're thin wrappers, not additional
@@ -42,7 +43,7 @@ npx skills add dbtlr/atlas-skills --skill '*'
 Refresh an existing install after changes:
 
 ```bash
-npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory merged adversarial-review start end -g -y
+npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory merged adversarial-review watching-a-pr start end -g -y
 ```
 
 Once installed, a primary session starts with:
@@ -68,7 +69,7 @@ Workspace well-formed.
 
 ## Repository layout
 
-- `skills/` — the seven skill sources, each self-contained (any `build_primer.py`, `resources/`, `references/`, `templates/` it needs co-located inside it).
+- `skills/` — the eight skill sources, each self-contained (any `build_primer.py`, `resources/`, `references/`, `templates/` it needs co-located inside it).
 - `skills/start-session/build_primer.py` — resolves the `.atlas.toml` binding and `$ATLAS_PATH` into the merged Active Context, folding in `mimir next` when present.
 - `tests/` — primer-merge tests (stdlib `unittest`).
 
