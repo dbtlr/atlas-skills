@@ -50,11 +50,18 @@ class BuildPrimerTest(unittest.TestCase):
             lines.append(f'workspace = "{workspace}"')
         write(self.repo / ".atlas.toml", "\n".join(lines) + "\n")
 
-    def write_active_context(self, workspace="demo"):
+    def write_active_context(self, workspace="demo", brief=None):
         ws = self.vault / "Workspaces"
         write(ws / "shared" / "user.md", "# User\nuser-profile-body")
         write(ws / "shared" / "memory.md", "# Memory\nshared-memory-body")
-        write(ws / workspace / f"{workspace}.md", "# Brief\nworkspace-brief-body")
+        if brief is None:
+            # A consolidated Brief: a generous baseline so the current size sits
+            # well under baseline × 1.2 and no hygiene banner fires.
+            brief = (
+                "---\ntitle: Brief\nbrief_baseline: 100000\n---\n"
+                "# Brief\nworkspace-brief-body"
+            )
+        write(ws / workspace / f"{workspace}.md", brief)
 
     def run_main(self):
         out, err = io.StringIO(), io.StringIO()
@@ -96,6 +103,65 @@ class BuildPrimerTest(unittest.TestCase):
         rc, _, err = self.run_main()
         self.assertEqual(rc, 3)
         self.assertIn("ATLAS_PATH is not set", err)
+
+    # --- brief hygiene banner (primer-bloat forcing function) ---
+    def test_no_banner_when_brief_within_baseline(self):
+        self.write_binding()
+        self.write_active_context()  # default: generous baseline, small brief
+        rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertNotIn("Primer hygiene", out)
+
+    def test_banner_when_brief_exceeds_baseline(self):
+        self.write_binding()
+        big = "---\nbrief_baseline: 50\n---\n# Brief\n" + ("brief-body " * 50)
+        self.write_active_context(brief=big)
+        rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertIn("Primer hygiene", out)
+        self.assertIn("consolidate-workspace", out)
+        # Banner leads the payload, before the primer header.
+        self.assertLess(out.index("Primer hygiene"), out.index("Atlas Session Primer"))
+        # The banner PREPENDS — the full Active Context must still render, so a
+        # regression that emits only the banner (empty primer) is caught.
+        self.assertIn("user-profile-body", out)
+        self.assertIn("shared-memory-body", out)
+        self.assertIn("brief-body", out)
+
+    def test_banner_recommends_initial_consolidation_when_no_baseline(self):
+        self.write_binding()
+        self.write_active_context(brief="# Brief\nno frontmatter, never consolidated")
+        rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertIn("Primer hygiene", out)
+        self.assertIn("never consolidated", out)
+        # Full Active Context still renders alongside the banner.
+        self.assertIn("user-profile-body", out)
+        self.assertIn("shared-memory-body", out)
+
+    def test_zero_baseline_does_not_crash_and_recommends_consolidation(self):
+        # A `brief_baseline: 0` must not divide-by-zero; it reads as unset.
+        self.write_binding()
+        self.write_active_context(brief="---\nbrief_baseline: 0\n---\n# Brief\nbody")
+        rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertIn("never consolidated", out)
+
+    def test_parse_brief_baseline_variants(self):
+        p = build_primer.parse_brief_baseline
+        self.assertEqual(p("---\nbrief_baseline: 42\n---\nx"), 42)
+        self.assertEqual(p('---\nbrief_baseline: "42"\n---\nx'), 42)
+        self.assertEqual(p("---\nbrief_baseline: 3200 # after a groom\n---\nx"), 3200)
+        self.assertIsNone(p("# no frontmatter"))
+        self.assertIsNone(p(None))
+        # A value outside the frontmatter block is not trusted.
+        self.assertIsNone(p("---\ntitle: x\n---\nbrief_baseline: 9"))
+        # Zero/negative are treated as unset (never divide by them).
+        self.assertIsNone(p("---\nbrief_baseline: 0\n---\nx"))
+        # A separated value must fail closed, not truncate to a tiny number.
+        self.assertIsNone(p("---\nbrief_baseline: 3,200\n---\nx"))
+        # A mismatched quote must not parse.
+        self.assertIsNone(p('---\nbrief_baseline: "42\n---\nx'))
 
     def test_missing_active_context_file_is_flagged(self):
         self.write_binding()

@@ -76,6 +76,17 @@ Consolidation isn't done until the Brief is **small again**. Follow `resources/w
 - **Zones.** Groom the **below-the-rule** zone freely; touch the **above-the-rule** manifest (overview, tech stack, key paths, conventions, navigation) only for factual pointer updates, never to rewrite human-authored content.
 - **Sanity check:** if the Brief reads like a log of what happened rather than the context a *new* session needs, it isn't groomed yet.
 
+### Stamp the groomed baseline
+
+A freshly-groomed Brief **is** this workspace's size target — it already reflects the project's legitimate durable complexity, so no hand-tuned number is needed. Once grooming is done, measure the Brief and record the size in its frontmatter as `brief_baseline`, overwriting any prior value. Measure with the **same code-point count** the primer uses (not `wc -m`, whose count is bytes under a C/POSIX locale and would drift from the primer's `len()` on any multi-byte content):
+
+```bash
+brief="$ATLAS_PATH/Workspaces/<workspace>/<workspace>.md"
+python3 -c 'import pathlib,sys; print(len(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")))' "$brief"
+```
+
+Write that number as `brief_baseline: <chars>` **in the YAML frontmatter block at the very top of the file** — between the opening and closing `---` fences, alongside `title`/`workspace` (an agent-maintained field). It must live *inside* that fenced block: the primer only trusts a baseline parsed from the frontmatter, not from the prose manifest below it. Don't otherwise rewrite the human-authored manifest. `build_primer.py` reads this baseline and, on each session start, soft-recommends re-running consolidation once the Brief grows past `brief_baseline × 1.2` — a non-blocking banner atop the primer. This is the **only** place the baseline is refreshed, so keep it current with every groom; the small delta from adding the stamp line itself is absorbed by the 20% margin. A Brief with no `brief_baseline` reads as never-consolidated and the primer recommends an initial pass, which seeds it here.
+
 ## 4. Record the run
 
 There's no state file to advance — the per-log `workspace_consolidated` flags **are** the record. Briefly report what was promoted and where, and what was dropped as stale/duplicate.
