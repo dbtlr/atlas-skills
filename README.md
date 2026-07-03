@@ -5,7 +5,7 @@ Atlas Skills teaches an agent to run a working **Session** — a body of work wi
 single through-line, from session start to session log — backed by a markdown
 knowledge vault and by **Mimir** for work tracking.
 
-## The nine skills
+## The ten skills
 
 | Skill | What it does |
 | --- | --- |
@@ -18,6 +18,7 @@ knowledge vault and by **Mimir** for work tracking.
 | `finishing-a-task` | The workflow for finishing a task, from "I think I'm done" to "merged and moved on": confirms the work is complete, requires a completed `adversarial-review` before the change leaves your hands, opens the PR, and hands off to `watching-a-pr`. The orchestrator of the PR trio; the embodiment of "not complete until verified and presented to a human." Vault-independent. |
 | `adversarial-review` | The verification gate before a PR: a proportionality gate (or declared skip), a deterministic suppression scan, review delegated to the harness's native engine (`/code-review`, `/review`, or a fallback), then the resolution loop — every finding fixed, dismissed with a reason, or deferred to a tracked task, recorded as a disposition trailer + table. Vault-independent — general engineering craft on the same install pipeline. |
 | `watching-a-pr` | The engagement loop around an open PR: arms a stateless background watcher (`pr_watcher.py`), then on each wake routes the batch it returns — addresses inline review comments, fixes red CI, announces green — and re-arms, until the PR merges (runs the `merged` cleanup + reconciles stragglers) or the watch times out. Part of the `finishing-a-task` workflow; vault-independent. |
+| `shaping` | The earliest design conversation: pressure-tests a half-baked idea to a decision-of-record (or a clean "no") and memorializes the rationale — **before any code**. Atlas-aware (Shaping Doc → the workspace `notes/`, on-commit ADR + glossary via `domain-modeling`), with a generic `docs/` fallback so it stands on its own in any repo. |
 
 Two typing-saver aliases install alongside them: **`/start`** → `start-session`
 and **`/end`** → `write-session-log`. They're thin wrappers, not additional
@@ -44,7 +45,7 @@ npx skills add dbtlr/atlas-skills --skill '*'
 Refresh an existing install after changes:
 
 ```bash
-npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory merged finishing-a-task adversarial-review watching-a-pr start end -g -y
+npx skills update start-session initialize-atlas write-session-log consolidate-workspace consolidate-memory merged finishing-a-task adversarial-review watching-a-pr shaping start end -g -y
 ```
 
 Once installed, a primary session starts with:
@@ -70,7 +71,7 @@ Workspace well-formed.
 
 ## Repository layout
 
-- `skills/` — the nine skill sources, each self-contained (any `build_primer.py`, `resources/`, `references/`, `templates/` it needs co-located inside it).
+- `skills/` — the ten skill sources, each self-contained (any `build_primer.py`, `resources/`, `references/`, `templates/` it needs co-located inside it).
 - `skills/start-session/build_primer.py` — resolves the `.atlas.toml` binding and `$ATLAS_PATH` into the merged Active Context, folding in `mimir next` when present.
 - `tests/` — primer-merge tests (stdlib `unittest`).
 
