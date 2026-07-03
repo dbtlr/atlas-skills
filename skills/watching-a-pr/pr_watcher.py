@@ -32,13 +32,22 @@ import time
 # filtering by author can't tell them apart.
 WATERMARK = "<!-- claude-watcher:seen -->"
 
-_RED_CONCLUSIONS = {"FAILURE", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
+# Contract: the agent marks its own PR artifacts with WATERMARK so the watcher skips
+# them (author-filtering can't, since agent and human share the GitHub identity). This
+# requires agent-posted artifacts to *carry a body* — the `watching-a-pr` skill posts
+# watermarked comments, not empty-bodied formal reviews, so an empty agent review can't
+# self-feed. Enforced by the poster (piece 5), not detectable here.
+_RED_CONCLUSIONS = {"FAILURE", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED",
+                    "STARTUP_FAILURE", "STALE"}
 _GREEN_CONCLUSIONS = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 
 
 def is_self(item):
-    """True if a comment/review was authored by the agent (carries the watermark)."""
-    return WATERMARK in (item.get("body") or "")
+    """True if a comment/review was authored by the agent (carries the watermark).
+
+    Matches the watermark only on its own *unquoted* line, so a human "Quote reply"
+    that pulls the marker into a `> `-prefixed quote is not mistaken for the agent."""
+    return any(line.strip() == WATERMARK for line in (item.get("body") or "").splitlines())
 
 
 def filter_self(items):
@@ -46,16 +55,32 @@ def filter_self(items):
 
 
 def gate_state(checks):
-    """Aggregate the check rollup into PENDING / GREEN / RED."""
+    """Aggregate the check rollup into PENDING / GREEN / RED.
+
+    Only *settles* (GREEN/RED) once every check is COMPLETED; a still-running check
+    keeps it PENDING. Once settled, an unrecognized conclusion counts as RED rather
+    than hanging PENDING forever (e.g. GitHub's STALE, or a null conclusion)."""
     if not checks:
+        return "PENDING"
+    if not all((c.get("status") or "").upper() == "COMPLETED" for c in checks):
         return "PENDING"
     concl = [(c.get("conclusion") or "").upper() for c in checks]
     if any(c in _RED_CONCLUSIONS for c in concl):
         return "RED"
-    all_done = all((c.get("status") or "").upper() == "COMPLETED" for c in checks)
-    if all_done and all(c in _GREEN_CONCLUSIONS for c in concl):
+    if all(c in _GREEN_CONCLUSIONS for c in concl):
         return "GREEN"
-    return "PENDING"
+    return "RED"  # all done but an unrecognized conclusion — surface it, never hang
+
+
+def _failing(checks):
+    return sorted(c["name"] for c in checks
+                  if (c.get("conclusion") or "").upper() in _RED_CONCLUSIONS)
+
+
+def gate_signature(checks):
+    """A signature that changes whenever the *settled outcome set* changes — so a
+    second check failing while already RED, or a different failing set, re-emits."""
+    return gate_state(checks) + ":" + ",".join(_failing(checks))
 
 
 def _stream(items, prev_hw, first_arm, make_event):
@@ -95,12 +120,17 @@ def compute_batch(state, since):
 
     events = ic_events + rc_events + rv_events
 
-    gs = gate_state(state.get("checks", []))
-    prev_gate = since.get("gate_sig")
-    if not first_arm and gs in ("GREEN", "RED") and gs != prev_gate:
-        failing = [c["name"] for c in state.get("checks", [])
-                   if (c.get("conclusion") or "").upper() in _RED_CONCLUSIONS]
-        events.append({"kind": "gates", "state": gs, "failing": failing})
+    checks = state.get("checks", [])
+    gs = gate_state(checks)
+    sig = gate_signature(checks)
+    # When the head advances (a pushed fix), the gate baseline resets — the new
+    # commit's settled result must re-emit even if its color matches the old one,
+    # otherwise an already-complete re-run is silently dropped.
+    head_changed = (not first_arm and since.get("head_sha") is not None
+                    and state.get("head_sha") != since.get("head_sha"))
+    prev_sig = None if head_changed else since.get("gate_sig")
+    if not first_arm and gs in ("GREEN", "RED") and sig != prev_sig:
+        events.append({"kind": "gates", "state": gs, "failing": _failing(checks)})
 
     terminal = None
     if state.get("merged"):
@@ -113,7 +143,7 @@ def compute_batch(state, since):
         "review_comment_hw": rc_hw,
         "review_hw": rv_hw,
         "head_sha": state.get("head_sha"),
-        "gate_sig": gs,
+        "gate_sig": sig,
     }
     return events, cursor, terminal
 
@@ -146,6 +176,19 @@ def _gh_json(args):
     return json.loads(out.stdout or "null")
 
 
+def _gh_object_pages(path, key):
+    """Paginate an *object*-returning endpoint and flatten `key` across pages.
+
+    `gh api --paginate` concatenates one JSON object per page for object endpoints
+    (e.g. check-runs), which json.loads can't parse; `--slurp` wraps the pages in an
+    array so we can merge their inner lists."""
+    pages = _gh_json(["api", path, "--paginate", "--slurp"]) or []
+    items = []
+    for pg in pages:
+        items.extend((pg or {}).get(key, []) or [])
+    return items
+
+
 def fetch_state(pr, repo):
     """Assemble the PR state from `gh api`, mapped to the shape compute_batch wants."""
     pull = _gh_json(["api", f"repos/{repo}/pulls/{pr}"])
@@ -167,10 +210,20 @@ def fetch_state(pr, repo):
         for r in _gh_json(["api", f"repos/{repo}/pulls/{pr}/reviews", "--paginate"])]
     checks = []
     if head_sha:
-        runs = _gh_json(["api", f"repos/{repo}/commits/{head_sha}/check-runs", "--paginate"])
+        # Check Runs API (GitHub Actions et al.)…
         checks = [{"name": c.get("name"), "status": (c.get("status") or "").upper(),
                    "conclusion": (c.get("conclusion") or None)}
-                  for c in (runs.get("check_runs") or [])]
+                  for c in _gh_object_pages(f"repos/{repo}/commits/{head_sha}/check-runs",
+                                            "check_runs")]
+        # …plus the legacy commit Status API (many external CI providers post here, not
+        # as check-runs). Missing them would let the gate read GREEN on a pending/red
+        # required status. Map its states into the same check shape.
+        status = _gh_json(["api", f"repos/{repo}/commits/{head_sha}/status"]) or {}
+        _st = {"success": ("COMPLETED", "SUCCESS"), "failure": ("COMPLETED", "FAILURE"),
+               "error": ("COMPLETED", "FAILURE"), "pending": ("IN_PROGRESS", None)}
+        for s in (status.get("statuses") or []):
+            st, concl = _st.get(s.get("state"), ("IN_PROGRESS", None))
+            checks.append({"name": s.get("context"), "status": st, "conclusion": concl})
     return {
         "head_sha": head_sha,
         "merged": bool(pull.get("merged")),

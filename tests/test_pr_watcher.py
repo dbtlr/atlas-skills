@@ -55,7 +55,8 @@ def kinds(events):
 
 class FilterSelfTest(unittest.TestCase):
     def test_watermarked_comment_is_dropped(self):
-        items = [ic(1, "human note"), ic(2, "done " + pr_watcher.WATERMARK)]
+        # the agent posts the marker on its own trailing line (the posting convention)
+        items = [ic(1, "human note"), ic(2, "done\n\n" + pr_watcher.WATERMARK)]
         kept = pr_watcher.filter_self(items)
         self.assertEqual([i["id"] for i in kept], [1])
 
@@ -96,7 +97,7 @@ class ComputeBatchTest(unittest.TestCase):
         s0 = state()
         _, cur, _ = pr_watcher.compute_batch(s0, None)
         # agent posts a watermarked reply (id 10), then a human comments (id 11)
-        s1 = state(review_comments=[rc(10, body="addressed " + pr_watcher.WATERMARK),
+        s1 = state(review_comments=[rc(10, body="addressed\n\n" + pr_watcher.WATERMARK),
                                     rc(11, body="human follow-up")])
         events, cur2, _ = pr_watcher.compute_batch(s1, cur)
         self.assertEqual([e["id"] for e in events], [11])          # only the human one
@@ -145,6 +146,99 @@ class ComputeBatchTest(unittest.TestCase):
         events, _, terminal = pr_watcher.compute_batch(s, None)
         self.assertEqual(terminal, "merged")
         self.assertEqual(kinds(events), ["merge"])
+
+
+class GateEdgeTest(unittest.TestCase):
+    def test_second_failure_while_already_red_re_emits_with_full_set(self):
+        red1 = state(checks=[check("test", "FAILURE")])
+        _, cur, _ = pr_watcher.compute_batch(state(checks=[check("test", None, "IN_PROGRESS")]), None)
+        events, cur2, _ = pr_watcher.compute_batch(red1, cur)
+        self.assertEqual(events[0]["failing"], ["test"])
+        red2 = state(checks=[check("lint", "FAILURE"), check("test", "FAILURE")])
+        events2, _, _ = pr_watcher.compute_batch(red2, cur2)          # still RED, but lint too
+        self.assertEqual(kinds(events2), ["gates"])
+        self.assertEqual(events2[0]["failing"], ["lint", "test"])
+
+    def test_gate_re_emits_on_head_advance_even_if_same_color(self):
+        red = state(head_sha="sha1", checks=[check("ci", "FAILURE")])
+        _, cur, _ = pr_watcher.compute_batch(state(head_sha="sha1", checks=[check("ci", None, "IN_PROGRESS")]), None)
+        _, cur2, _ = pr_watcher.compute_batch(red, cur)               # RED on sha1
+        # push a fix; the new commit's checks are already complete and also red
+        red2 = state(head_sha="sha2", checks=[check("ci", "FAILURE")])
+        events, _, _ = pr_watcher.compute_batch(red2, cur2)
+        self.assertEqual(kinds(events), ["gates"])                    # not silently dropped
+
+    def test_unknown_completed_conclusion_settles_as_red_not_pending(self):
+        self.assertEqual(pr_watcher.gate_state([check("x", "STALE")]), "RED")
+        self.assertEqual(pr_watcher.gate_state([check("x", "WEIRD_NEW_THING")]), "RED")
+
+    def test_incomplete_check_stays_pending(self):
+        self.assertEqual(pr_watcher.gate_state([check("x", "SUCCESS"),
+                                                check("y", None, "IN_PROGRESS")]), "PENDING")
+
+    def test_quoted_watermark_is_not_treated_as_the_agent(self):
+        quoted = rc(9, body=f"> Looks good {pr_watcher.WATERMARK}\n\nbut fix the edge case")
+        self.assertFalse(pr_watcher.is_self(quoted))
+        _, cur, _ = pr_watcher.compute_batch(state(), None)
+        events, _, _ = pr_watcher.compute_batch(state(review_comments=[quoted]), cur)
+        self.assertEqual(kinds(events), ["review_comment"])           # human reply preserved
+
+
+class FetchStateTest(unittest.TestCase):
+    def _run(self, pull, review_comments=(), issue_comments=(), reviews=(),
+             check_runs=(), statuses=()):
+        from unittest import mock
+
+        def gh_json(args):
+            path = args[1] if len(args) > 1 else ""
+            if path.endswith(f"/pulls/1"):
+                return pull
+            if "/pulls/1/comments" in path:
+                return list(review_comments)
+            if "/issues/1/comments" in path:
+                return list(issue_comments)
+            if "/pulls/1/reviews" in path:
+                return list(reviews)
+            if path.endswith("/status"):
+                return {"statuses": list(statuses)}
+            raise AssertionError(f"unexpected gh call: {args}")
+
+        with mock.patch.object(pr_watcher, "_gh_json", side_effect=gh_json), \
+             mock.patch.object(pr_watcher, "_gh_object_pages",
+                               return_value=list(check_runs)):
+            return pr_watcher.fetch_state("1", "o/r")
+
+    def test_maps_fields_and_flattens_streams(self):
+        s = self._run(
+            pull={"head": {"sha": "abc"}, "merged": False, "merged_at": None},
+            review_comments=[{"id": 5, "user": {"login": "drew"}, "body": "b",
+                              "path": "a.py", "line": 3, "diff_hunk": "@@",
+                              "created_at": "t"}],
+            reviews=[{"id": 2, "user": {"login": "drew"}, "state": "APPROVED",
+                      "body": "", "submitted_at": "t"}],
+            check_runs=[{"name": "ci", "status": "completed", "conclusion": "success"}])
+        self.assertEqual(s["head_sha"], "abc")
+        self.assertEqual(s["review_comments"][0]["line"], 3)
+        self.assertEqual(s["reviews"][0]["state"], "APPROVED")
+        self.assertEqual(pr_watcher.gate_state(s["checks"]), "GREEN")
+
+    def test_folds_legacy_commit_status_into_checks(self):
+        s = self._run(
+            pull={"head": {"sha": "abc"}, "merged": False},
+            check_runs=[{"name": "ci", "status": "completed", "conclusion": "success"}],
+            statuses=[{"context": "buildkite", "state": "failure"}])
+        # a failing legacy status must turn the gate RED despite the green check-run
+        self.assertEqual(pr_watcher.gate_state(s["checks"]), "RED")
+        self.assertIn("buildkite", pr_watcher._failing(s["checks"]))
+
+    def test_none_user_and_missing_head_do_not_crash(self):
+        s = self._run(
+            pull={"merged": True, "merged_at": "t"},               # no "head"
+            issue_comments=[{"id": 1, "user": None, "body": "hi", "created_at": "t"}])
+        self.assertIsNone(s["head_sha"])
+        self.assertTrue(s["merged"])
+        self.assertIsNone(s["issue_comments"][0]["author"])
+        self.assertEqual(s["checks"], [])                          # no head -> no gate calls
 
 
 class PollTest(unittest.TestCase):
