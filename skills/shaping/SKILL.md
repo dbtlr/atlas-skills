@@ -64,16 +64,11 @@ These are *moves*, not a rigid sequence. Read the conversation and reach for the
 
 9. **Memorialize for the consumer, not as a transcript.** The durable output is shaped for *whoever uses it next* — a worklist with acceptance criteria for an implementer, an architecture-of-record for a future engineer, ask→get tests for another tool's author. Lift conclusions into their right home (a note, an ADR, a glossary term). A transcript dump is not a deliverable.
 
-## The human's grain
+## Read the human's grain
 
-Run the conversation the way the human works (tune this section to them):
+Shaping is a conversation, so run it the way *this* human works — how much they want a recommendation versus a menu, how they signal a one-level-up reframe, how they pace. Don't assume a style; read it from how they engage, and adapt the moves above to fit.
 
-- **Reasons best against concrete strawmen** — bring a sample artifact, a named option, or a taxonomy; avoid abstract open prompts.
-- **Expects one-level-up reframes** — on shape/existence questions, they often replace the frame with a principle. That *is* the answer.
-- **Recommendation-forward** — give a clear recommended path with rationale, not an exhaustive menu. Reserve formal multi-option questions for genuine forks.
-- **Generative principles over enumerated rules** — when they name a principle, propagate it everywhere.
-- **Verify-from-source** — "did something change?" / "are you sure?" means go check the data, code, or docs to root cause; don't reassure from memory.
-- **Spec heavily, then autonomy** — engage deeply during shaping; once a direction is aligned, charge to the next real boundary without status pings.
+Where the human's working style is already written down, use it rather than re-deriving it. **In an atlas workspace the Session Primer's User Profile carries exactly this** — durable facts about how the human reasons, decides, and communicates; read it and let it tune the conversation. Outside atlas, infer from the exchange itself and any project instructions, and adjust as the signals sharpen.
 
 ## The output artifacts
 
@@ -99,7 +94,7 @@ The primary artifact: the architecture/decision-of-record. It is **durable knowl
 - **The seam & principles** — the named generative principles that govern the design.
 - **Structural / on-disk model** — if the idea has a concrete shape (schema, layout, interfaces).
 - **Resolved forks** — each design-changing question with its settled answer (and the evidence).
-- **Cost / value read** — honest sizing, and which work is independently justified vs. irreducibly speculative.
+- **Cost / value** — honest sizing, and which work is independently justified vs. irreducibly speculative.
 - **Phased plan + sizing** — *the highest-value section for future scoping.* The sequence of mergeable, de-risked phases, what de-risks each, and where the sharp edges are. This is the part that gets re-referenced in every later scoping pass; make it standalone-useful.
 - **Performance / risk model** — the governing rules and where the new risks live.
 - **Spec-at-phase / open items** — the deferred mechanical questions, named so they aren't lost.
