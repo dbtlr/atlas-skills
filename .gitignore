@@ -20,3 +20,5 @@ CLAUDE.local.md
 
 # Agent Artifacts
 docs/superpowers
+.codex/
+.claude/saga-claude-hook.sh
