@@ -28,7 +28,7 @@ Requires Python 3. Stdlib only.
              {
                "type": "command",
                "if": "Bash(gh *)",
-               "command": "~/.claude/hooks/nudge-watch-pr.py"
+               "command": "$HOME/.agents/skills/watching-a-pr/resources/hooks/nudge-watch-pr.py"
              }
            ]
          }
@@ -37,18 +37,18 @@ Requires Python 3. Stdlib only.
    }
    ```
 
-   (`if: "Bash(gh *)"` fires the hook only when a `gh` command runs — it strips leading `VAR=value` and inspects subcommands in compound commands — so the Python isn't spawned on every Bash call.)
+   Use the **same path** you chmod'd in step 1 (adjust it to your install location). The **`if: "Bash(gh *)"`** (Claude Code **v2.1.85+**) fires the hook only when a `gh` command runs — it strips leading `VAR=value` and inspects subcommands in compound commands — so the Python isn't spawned on every Bash call. It matches by command *name*, so an absolute-path invocation (`/opt/homebrew/bin/gh …`) would skip it; the nudge is low-stakes, so that's an acceptable miss. Omit `if` on builds older than v2.1.85 — the script self-filters either way.
 
 3. Restart Claude Code — hooks load at session start. Confirm with `/hooks`.
 
 ## What it does
 
-On a Bash `gh … pr … create` (flags may interleave) whose output contains a PR URL (`https://github.com/…/pull/<N>`), it emits a `systemMessage` telling the agent to invoke `watching-a-pr` with PR #N. On anything else — not a PR creation, a creation that produced no URL (i.e. failed), an unparseable command — it emits nothing. Fail-open throughout: a missed nudge just means the agent arms the watcher itself; a spurious one would be noise, so it fires only on a confirmed creation.
+On a Bash PR creation — `gh … pr … create` (flags may interleave) or `gh api …/pulls` — whose `tool_output` contains a PR URL (`https://<host>/…/pull/<N>`, any GitHub host), it emits a `systemMessage` telling the agent to invoke `watching-a-pr` with PR #N. It reads the **last** URL in the output (the one `gh` prints for the created PR, not one referenced in the command body) and doesn't assert "created" — a re-run on an existing PR still correctly points at a PR worth watching. On anything else — not a PR creation, no URL in the output (a failed create), an unparseable command, or an unexpected payload shape — it emits nothing. **Fail-open throughout, unconditionally**: the whole body is guarded, so no payload can make it crash the tool call.
 
 ## Test without creating a PR
 
 ```bash
-H=~/.claude/hooks/nudge-watch-pr.py
-echo '{"tool_name":"Bash","tool_input":{"command":"gh pr create -f"},"tool_result":"https://github.com/o/r/pull/42"}' | "$H"; echo "exit=$?"
-echo '{"tool_name":"Bash","tool_input":{"command":"gh pr view 42"},"tool_result":"..."}' | "$H"; echo "(should be silent) exit=$?"
+H=~/.agents/skills/watching-a-pr/resources/hooks/nudge-watch-pr.py
+echo '{"tool_name":"Bash","tool_input":{"command":"gh pr create -f"},"tool_output":"https://github.com/o/r/pull/42"}' | "$H"; echo "exit=$?"
+echo '{"tool_name":"Bash","tool_input":{"command":"gh pr view 42"},"tool_output":"..."}' | "$H"; echo "(should be silent) exit=$?"
 ```

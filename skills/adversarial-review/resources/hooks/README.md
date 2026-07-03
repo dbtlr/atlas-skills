@@ -36,7 +36,9 @@ Requires Python 3 and `git` on PATH. Stdlib only.
    }
    ```
 
-   The **`if: "Bash(gh *)"`** scopes the hook to `gh` commands, so the script only spawns when you actually call GitHub — not on every Bash tool call. It strips leading `VAR=value` and inspects subcommands in compound commands, so it's a reliable pre-filter; the script still self-checks that the segment is a PR creation. (Omit `if` if your Claude Code build predates the field — the script self-filters correctly either way, just less cheaply.)
+   The **`if: "Bash(gh *)"`** (Claude Code **v2.1.85+**) scopes the hook to `gh` commands, so the script only spawns when you actually call GitHub — not on every Bash tool call. It strips leading `VAR=value` and inspects subcommands in compound commands; the script still self-checks that the segment is a PR creation.
+
+   **Trade-off for this gate:** `if` matches by command *name*, so an absolute-path invocation (`/opt/homebrew/bin/gh pr create`) would skip the hook and open a PR without the trailer check. That's a rare path (agents type `gh`, not the full path), but for a security-relevant gate it's a real gap — if you want full coverage, **omit `if`** and let the hook fire on every Bash call (the script self-filters, just less cheaply). Omit it, too, on builds older than v2.1.85.
 
 3. Restart Claude Code — hooks load at session start and never hot-swap. Confirm with `/hooks`.
 
