@@ -40,6 +40,7 @@ python3 "$(ls "$HOME/.claude/skills/start-session/build_primer.py" \
 - If it prints `ATLAS_UNINITIALIZED: …`, this project has no Project Binding (`.atlas.toml`) — it isn't an atlas workspace. **Stop silently and proceed with the user's request normally; do not mention atlas or pitch initialization.** This skill triggers on *any* session (the trigger lives in the skill, not in a per-project file), so an unbound project is the common, expected case — exit quietly. Only route to **initialize-atlas** if the user is explicitly setting up atlas (e.g. "initialize my workspace", "bind this repo to a vault").
 - If it reports `ATLAS_PATH is not set`, the vault location is unknown — ask the user to `export ATLAS_PATH=<their atlas vault root>` (it always points at the atlas vault), then re-run.
 - Otherwise, treat the printed payload as your **Active Context** for the session — User Profile, Shared Memory, the Workspace Brief, and (when the repo tracks work in Mimir) the current work queue. Internalize it; don't echo it back to the user.
+- If the payload opens with a **⚠️ Primer hygiene** banner, the Workspace Brief has outgrown its groomed baseline (or was never consolidated). Surface that soft recommendation and offer to run **consolidate-workspace** — it's non-blocking, so proceed with the user's request either way; don't let it derail the session.
 
 ## 2. Hold the through-line
 

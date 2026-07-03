@@ -50,11 +50,18 @@ class BuildPrimerTest(unittest.TestCase):
             lines.append(f'workspace = "{workspace}"')
         write(self.repo / ".atlas.toml", "\n".join(lines) + "\n")
 
-    def write_active_context(self, workspace="demo"):
+    def write_active_context(self, workspace="demo", brief=None):
         ws = self.vault / "Workspaces"
         write(ws / "shared" / "user.md", "# User\nuser-profile-body")
         write(ws / "shared" / "memory.md", "# Memory\nshared-memory-body")
-        write(ws / workspace / f"{workspace}.md", "# Brief\nworkspace-brief-body")
+        if brief is None:
+            # A consolidated Brief: a generous baseline so the current size sits
+            # well under baseline × 1.2 and no hygiene banner fires.
+            brief = (
+                "---\ntitle: Brief\nbrief_baseline: 100000\n---\n"
+                "# Brief\nworkspace-brief-body"
+            )
+        write(ws / workspace / f"{workspace}.md", brief)
 
     def run_main(self):
         out, err = io.StringIO(), io.StringIO()
@@ -96,6 +103,41 @@ class BuildPrimerTest(unittest.TestCase):
         rc, _, err = self.run_main()
         self.assertEqual(rc, 3)
         self.assertIn("ATLAS_PATH is not set", err)
+
+    # --- brief hygiene banner (primer-bloat forcing function) ---
+    def test_no_banner_when_brief_within_baseline(self):
+        self.write_binding()
+        self.write_active_context()  # default: generous baseline, small brief
+        rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertNotIn("Primer hygiene", out)
+
+    def test_banner_when_brief_exceeds_baseline(self):
+        self.write_binding()
+        big = "---\nbrief_baseline: 50\n---\n" + ("x" * 500)
+        self.write_active_context(brief=big)
+        rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertIn("Primer hygiene", out)
+        self.assertIn("consolidate-workspace", out)
+        # Banner leads the payload, before the primer header.
+        self.assertLess(out.index("Primer hygiene"), out.index("Atlas Session Primer"))
+
+    def test_banner_recommends_initial_consolidation_when_no_baseline(self):
+        self.write_binding()
+        self.write_active_context(brief="# Brief\nno frontmatter, never consolidated")
+        rc, out, err = self.run_main()
+        self.assertEqual(rc, 0, err)
+        self.assertIn("Primer hygiene", out)
+        self.assertIn("never consolidated", out)
+
+    def test_parse_brief_baseline_variants(self):
+        self.assertEqual(build_primer.parse_brief_baseline("---\nbrief_baseline: 42\n---\nx"), 42)
+        self.assertEqual(build_primer.parse_brief_baseline('---\nbrief_baseline: "42"\n---\nx'), 42)
+        self.assertIsNone(build_primer.parse_brief_baseline("# no frontmatter"))
+        self.assertIsNone(build_primer.parse_brief_baseline(None))
+        # A value outside the frontmatter block is not trusted.
+        self.assertIsNone(build_primer.parse_brief_baseline("---\ntitle: x\n---\nbrief_baseline: 9"))
 
     def test_missing_active_context_file_is_flagged(self):
         self.write_binding()

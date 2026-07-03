@@ -19,6 +19,7 @@ Requires Python 3.11+ (stdlib `tomllib`) or the `tomli` package.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -35,6 +36,15 @@ except ModuleNotFoundError:  # pragma: no cover - older interpreters
 
 BINDING_FILENAME = ".atlas.toml"
 MIMIR_FILENAME = ".mimir.toml"
+
+# Recommend re-grooming the Brief once it exceeds its groomed baseline by this
+# factor. The only fixed constant in the primer-bloat forcing function: the
+# per-workspace target itself lives in the Brief frontmatter (`brief_baseline`,
+# stamped by consolidate-workspace), so it scales with each project's durable
+# complexity and the two budgets cannot drift.
+BRIEF_BLOAT_MARGIN = 1.2
+
+_BASELINE_RE = re.compile(r"^brief_baseline\s*:\s*[\"']?(\d+)", re.MULTILINE)
 
 
 def find_binding(start: Path) -> Path | None:
@@ -56,6 +66,53 @@ def read_optional(path: Path) -> str | None:
         return path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return None
+
+
+def parse_brief_baseline(brief_text: str | None) -> int | None:
+    """Read the groomed-size baseline stamped in the Brief frontmatter.
+
+    consolidate-workspace writes `brief_baseline: <chars>` after grooming; the
+    primer budgets the current Brief against it. Only a value inside the leading
+    `---` frontmatter block is trusted. Returns None when the Brief has no
+    frontmatter baseline (never consolidated) or it can't be parsed.
+    """
+    if not brief_text or not brief_text.startswith("---"):
+        return None
+    end = brief_text.find("\n---", 3)
+    if end == -1:
+        return None
+    m = _BASELINE_RE.search(brief_text[:end])
+    return int(m.group(1)) if m else None
+
+
+def brief_hygiene_banner(brief_text: str | None) -> str | None:
+    """A soft, non-blocking recommendation to groom the Workspace Brief.
+
+    Self-calibrating: consolidate-workspace stamps the groomed Brief size as the
+    per-workspace baseline, and the primer recommends re-grooming once the Brief
+    grows past `baseline × BRIEF_BLOAT_MARGIN`. A Brief with no baseline has
+    never been consolidated — recommend an initial pass, which seeds the
+    baseline. A missing Brief is flagged elsewhere, so there's nothing to budget.
+    """
+    if brief_text is None:
+        return None
+    baseline = parse_brief_baseline(brief_text)
+    if baseline is None:
+        return (
+            "> ⚠️ **Primer hygiene** — the Workspace Brief has no recorded "
+            "baseline (never consolidated). Run **consolidate-workspace** to "
+            "groom it and seed the baseline. _Soft recommendation, non-blocking._"
+        )
+    current = len(brief_text)
+    if current > baseline * BRIEF_BLOAT_MARGIN:
+        pct = round(100 * current / baseline)
+        return (
+            f"> ⚠️ **Primer hygiene** — the Workspace Brief is ~{current} chars, "
+            f"{pct}% of its groomed baseline ({baseline}). Run "
+            "**consolidate-workspace** to groom it back down. "
+            "_Soft recommendation, non-blocking._"
+        )
+    return None
 
 
 def section(title: str, body: str | None, missing_hint: str) -> str:
@@ -133,7 +190,11 @@ def main(argv: list[str]) -> int:
     memory_md = read_optional(shared_dir / "memory.md")
     brief_md = read_optional(ws_dir / f"{workspace}.md")
 
-    parts = [
+    parts: list[str] = []
+    banner = brief_hygiene_banner(brief_md)
+    if banner is not None:
+        parts += [banner, ""]
+    parts += [
         f"# Atlas Session Primer — {workspace}",
         "",
         f"_Vault `{root}` · workspace `{workspace}`. This is your Active Context "

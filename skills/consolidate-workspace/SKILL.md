@@ -76,6 +76,17 @@ Consolidation isn't done until the Brief is **small again**. Follow `resources/w
 - **Zones.** Groom the **below-the-rule** zone freely; touch the **above-the-rule** manifest (overview, tech stack, key paths, conventions, navigation) only for factual pointer updates, never to rewrite human-authored content.
 - **Sanity check:** if the Brief reads like a log of what happened rather than the context a *new* session needs, it isn't groomed yet.
 
+### Stamp the groomed baseline
+
+A freshly-groomed Brief **is** this workspace's size target — it already reflects the project's legitimate durable complexity, so no hand-tuned number is needed. Once grooming is done, measure the Brief and record the size in its frontmatter as `brief_baseline`, overwriting any prior value:
+
+```bash
+brief="$ATLAS_PATH/Workspaces/<workspace>/<workspace>.md"
+wc -m < "$brief"   # character count — write this number as brief_baseline
+```
+
+Set `brief_baseline: <chars>` in the Brief's frontmatter (an agent-maintained field; leave the rest of the above-the-rule manifest alone). `build_primer.py` reads this baseline and, on each session start, soft-recommends re-running consolidation once the Brief grows past `brief_baseline × 1.2` — a non-blocking banner atop the primer. This is the **only** place the baseline is written, so keep it current with every groom; the small delta from adding the stamp line itself is absorbed by the 20% margin. A Brief with no `brief_baseline` reads as never-consolidated and the primer recommends an initial pass, which seeds it here.
+
 ## 4. Record the run
 
 There's no state file to advance — the per-log `workspace_consolidated` flags **are** the record. Briefly report what was promoted and where, and what was dropped as stale/duplicate.
