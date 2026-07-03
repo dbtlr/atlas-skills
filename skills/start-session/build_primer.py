@@ -44,7 +44,14 @@ MIMIR_FILENAME = ".mimir.toml"
 # complexity and the two budgets cannot drift.
 BRIEF_BLOAT_MARGIN = 1.2
 
-_BASELINE_RE = re.compile(r"^brief_baseline\s*:\s*[\"']?(\d+)", re.MULTILINE)
+# The value must be a clean integer that is the *whole* scalar — optionally
+# quoted (open/close must match), with only trailing space or a `# comment`
+# after it. A separated or annotated value (e.g. `3,200`) fails to match and
+# falls to None ("never consolidated") rather than silently truncating to `3`.
+_BASELINE_RE = re.compile(
+    r"^brief_baseline\s*:\s*(?P<q>[\"']?)(?P<n>\d+)(?P=q)\s*(?:#.*)?$",
+    re.MULTILINE,
+)
 
 
 def find_binding(start: Path) -> Path | None:
@@ -82,7 +89,13 @@ def parse_brief_baseline(brief_text: str | None) -> int | None:
     if end == -1:
         return None
     m = _BASELINE_RE.search(brief_text[:end])
-    return int(m.group(1)) if m else None
+    if not m:
+        return None
+    # A non-positive baseline is nonsensical (a groomed Brief is never 0 chars);
+    # treat it as unset so the primer recommends consolidation — which re-stamps
+    # a real baseline — rather than dividing by it.
+    value = int(m.group("n"))
+    return value if value > 0 else None
 
 
 def brief_hygiene_banner(brief_text: str | None) -> str | None:
