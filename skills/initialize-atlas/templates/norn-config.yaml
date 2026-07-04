@@ -48,6 +48,21 @@ validate:
         - workspace
         - workspace_consolidated
         - memory_consolidated
+      # Bounded values double as the scan index — the consolidate skills filter
+      # on the two flags and on workspace across the whole vault; unbounded
+      # fields force a full-vault scan on every `norn find`. The workspace enum
+      # is maintained by initialize-atlas: it appends the workspace name when
+      # binding a repo (and verifies membership on heal). Keep every name a
+      # session log has ever carried — removing one invalidates frozen logs.
+      allowed_values:
+        workspace_consolidated:
+          - true
+          - false
+        memory_consolidated:
+          - true
+          - false
+        workspace:
+          - shared
       allowed_paths:
         - "artifacts/session-logs/*.md"
 
