@@ -21,17 +21,24 @@ Consolidation is a **different job** from `write-session-log`. write-session-log
 This skill drives **norn** to find and mark Session Logs; there is no fallback. Check it's available before doing anything:
 
 ```bash
-command -v norn || { echo "consolidate-workspace requires the 'norn' CLI, which was not found on PATH. Install norn and ensure it's on your PATH, then re-run."; exit 1; }
+command -v norn || { echo "consolidate-workspace requires the 'norn' CLI on PATH. Install it and re-run."; exit 1; }
+[ -n "$ATLAS_PATH" ] && [ -f "$ATLAS_PATH/.norn/config.yaml" ] || { echo "consolidate-workspace needs ATLAS_PATH set to the atlas vault root (the dir containing .norn/config.yaml)."; exit 1; }
 ```
 
 If `norn` is missing, **stop and tell the user to install norn and put it on their PATH** — do not fall back to manually scanning `artifacts/session-logs/`.
+
+> **Pin the vault on every norn call: `norn -C "$ATLAS_PATH" …`.** norn resolves its vault
+> from `$NORN_ROOT`, else the current directory — never from `ATLAS_PATH`. This skill runs
+> from a repo cwd, so a bare `norn` call operates on whatever `.norn` is nearest (or none),
+> silently reading or writing the wrong place. Always pass `-C "$ATLAS_PATH"`, including in
+> every sub-agent you dispatch that touches norn.
 
 ## 1. Find this workspace's unconsolidated logs
 
 There's no watermark file. Each Session Log carries a `workspace_consolidated` flag, so ask **norn** for the ones still open in this workspace:
 
 ```bash
-norn find --eq type:session-log --eq workspace:<workspace> --eq workspace_consolidated:false
+norn -C "$ATLAS_PATH" find --eq type:session-log --eq workspace:<workspace> --eq workspace_consolidated:false
 ```
 
 Each returned log's **Consolidation Candidates** section is a unit of work; process oldest-first. The companion flag `memory_consolidated` belongs to **consolidate-memory** — don't read or touch it here.
@@ -60,7 +67,7 @@ Per `resources/consolidation-candidates.md`. **Before routing any candidate, ver
 Once a log's durable-knowledge + future-opportunity candidates are routed (or confirmed already-captured by the dedup check), mark it so it drops out of the scan:
 
 ```bash
-norn set <log path> --field-json workspace_consolidated=true --yes
+norn -C "$ATLAS_PATH" set <log path> --field-json workspace_consolidated=true --yes
 ```
 
 This touches only `workspace_consolidated` — never `memory_consolidated`.
@@ -85,7 +92,13 @@ brief="$ATLAS_PATH/Workspaces/<workspace>/<workspace>.md"
 python3 -c 'import pathlib,sys; print(len(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")))' "$brief"
 ```
 
-Write that number as `brief_baseline: <chars>` **in the YAML frontmatter block at the very top of the file** — between the opening and closing `---` fences, alongside `title`/`workspace` (an agent-maintained field). It must live *inside* that fenced block: the primer only trusts a baseline parsed from the frontmatter, not from the prose manifest below it. Don't otherwise rewrite the human-authored manifest. `build_primer.py` reads this baseline and, on each session start, soft-recommends re-running consolidation once the Brief grows past `brief_baseline × 1.2` — a non-blocking banner atop the primer. This is the **only** place the baseline is refreshed, so keep it current with every groom; the small delta from adding the stamp line itself is absorbed by the 20% margin. A Brief with no `brief_baseline` reads as never-consolidated and the primer recommends an initial pass, which seeds it here.
+Stamp that number into the Brief's frontmatter with norn — schema-aware, atomic, and guaranteed to land inside the fenced block (which is the only place the primer trusts):
+
+```bash
+norn -C "$ATLAS_PATH" set "Workspaces/<workspace>/<workspace>.md" --field-json brief_baseline=<chars> --yes
+```
+
+(An `unknown field: brief_baseline` warning is expected and benign — the field is agent-maintained, not in the vault schema.) Don't otherwise rewrite the human-authored manifest. `build_primer.py` reads this baseline and, on each session start, soft-recommends re-running consolidation once the Brief grows past `brief_baseline × 1.2` — a non-blocking banner atop the primer. This is the **only** place the baseline is refreshed, so keep it current with every groom; the small delta from adding the stamp line itself is absorbed by the 20% margin. A Brief with no `brief_baseline` reads as never-consolidated and the primer recommends an initial pass, which seeds it here.
 
 ## 4. Record the run
 
