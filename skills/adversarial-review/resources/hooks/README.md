@@ -55,6 +55,7 @@ These are the price of a fail-open speed bump; closing them isn't worth the comp
 - **Deliberate evasion isn't stopped** — a `gh` alias, `gh api` through a non-`/pulls` path, or a different tool can open a PR the matcher never sees. Out of scope by design; the target is forgetfulness, not adversarial bypass.
 - **Inherited trailers pass** — a branch stacked on an already-reviewed branch inherits its trailer in `base..HEAD`, so its own new commits ride through. The skill's re-review rule still governs the human; the hook won't catch this case.
 - **`cd`-into-another-repo compound commands** (`cd ../other && gh pr create`) are measured against the session's repo, not the one `gh` runs in.
+- **A fused trailer-commit + PR-create compound self-blocks** (`git commit -m "… Adversarial-Review: …" && gh pr create …`). The hook checks *committed* state before any part of the proposed command executes, so a trailer that only exists as text inside the same command doesn't count — deliberately: honoring intent would turn "proof exists on the branch" into "proof is promised." Commit the trailer in its own call, then create the PR.
 
 ## Test it without creating a PR
 
