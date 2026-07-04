@@ -1,0 +1,101 @@
+# norn configuration — minimum schema contract for the atlas skills.
+# Seeded by initialize-atlas on a fresh vault; extend freely (this is a floor,
+# not a ceiling). Never re-seeded over an existing config.
+
+files:
+  ignore:
+    - ".obsidian/**"
+    - ".git/**"
+    - ".trash/**"
+
+validate:
+  rules:
+    # Every document declares its type.
+    - name: document-type
+      match:
+        path: "**/*.md"
+      required_frontmatter:
+        - type
+      allowed_values:
+        type:
+          - note
+          - session-log
+          - observations
+          - user-profile
+          - shared-memory
+
+    # Session Logs (write-session-log). The two consolidation-state flags are
+    # the cursor the consolidate-workspace / consolidate-memory skills scan on
+    # via `norn find` and stamp via `norn set` — required here so a log missing
+    # them fails validation.
+    - name: session-log-base
+      match:
+        path: "**/*.md"
+        frontmatter:
+          type: session-log
+      required_frontmatter:
+        - title
+        - description
+        - created
+        - modified
+        - workspace
+        - workspace_consolidated
+        - memory_consolidated
+      allowed_paths:
+        - "artifacts/session-logs/*.md"
+
+    # Shared-profile singletons (consolidate-memory): the observations ledger
+    # and the two curated profile files. Dedicated types so generic note rules
+    # never snare them.
+    - name: observations-base
+      match:
+        path: "**/*.md"
+        frontmatter:
+          type: observations
+      required_frontmatter:
+        - title
+        - description
+        - created
+        - modified
+        - workspace
+      allowed_paths:
+        - "Workspaces/shared/observations.md"
+
+    - name: user-profile-base
+      match:
+        path: "**/*.md"
+        frontmatter:
+          type: user-profile
+      required_frontmatter:
+        - title
+        - description
+        - created
+        - modified
+        - workspace
+      allowed_paths:
+        - "Workspaces/shared/user.md"
+
+    - name: shared-memory-base
+      match:
+        path: "**/*.md"
+        frontmatter:
+          type: shared-memory
+      required_frontmatter:
+        - title
+        - description
+        - created
+        - modified
+        - workspace
+      allowed_paths:
+        - "Workspaces/shared/memory.md"
+
+    # Pre-fills note frontmatter for `norn new` under a workspace notes/
+    # folder (used by shaping and consolidation when writing notes).
+    - name: note-folder-defaults
+      match:
+        path: "Workspaces/{{workspace}}/notes/**/*.md"
+      frontmatter_defaults:
+        type: note
+        workspace: "[[{{path.workspace}}]]"
+        created: "{{now}}"
+        modified: "{{now}}"
