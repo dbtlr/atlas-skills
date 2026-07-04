@@ -36,7 +36,7 @@ Compute the scope once and hand it to every finder verbatim:
 
 ### Finder count — scaled to diff size (SKILL.md "size caps width")
 
-Model tier stays strong for every agent; only the *count* scales with surface area.
+Every agent spawns pinned to the senior-review model (SKILL.md "run the engine" rules — on Claude Code, `model: opus`), never inheriting the session model; only the *count* scales with surface area.
 
 | Diff size | Correctness finders | Cleanup finder |
 | --- | --- | --- |
