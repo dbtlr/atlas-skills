@@ -1,15 +1,3 @@
----
-title: {{SESSION_TITLE}}
-description: {{ONE_LINE}}
-type: session-log
-kind: null
-workspace: {{WORKSPACE}}
-created: {{TIMESTAMP}}
-modified: {{TIMESTAMP}}
-workspace_consolidated: false
-memory_consolidated: false
----
-
 # {{TIMESTAMP}} — {{SESSION_TITLE}}
 
 ## Overview

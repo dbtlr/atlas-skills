@@ -26,7 +26,7 @@ A candidate is **carried** when it repeats one a prior Session Log already raise
 
 ## Routing
 
-Two skills own different buckets, keyed on different session-log flags — each scans (`norn find`) and marks (`norn set`) only its own flag:
+Two skills own different buckets, keyed on different session-log flags — each scans (`norn -C "$ATLAS_PATH" find`) and marks (`norn -C "$ATLAS_PATH" set`) only its own flag:
 
 | Bucket | Routes to | Skill (flag) |
 |--------|-----------|--------------|

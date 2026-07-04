@@ -42,7 +42,7 @@ memory_consolidated: false      # flipped true by consolidate-memory
 ---
 ```
 
-`workspace_consolidated` / `memory_consolidated` are the consolidation cursor: `write-session-log` stamps both `false`; the consolidate skills scan on them (`norn find`) and flip them (`norn set`). norn's `session-log-base` rule requires their presence.
+`workspace_consolidated` / `memory_consolidated` are the consolidation cursor: `write-session-log` stamps both `false` (via `norn new`); the consolidate skills scan on them (`norn -C "$ATLAS_PATH" find`) and flip them (`norn -C "$ATLAS_PATH" set`). norn's `session-log-base` rule requires their presence.
 
 ## Rules
 

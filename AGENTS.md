@@ -16,6 +16,14 @@ a required environment variable (there is no registry and no per-repo vault
 config). A repo is an atlas workspace when it has an `.atlas.toml` binding
 naming its `workspace`.
 
+**norn is the vault-write authority.** Skills that create or mutate vault
+documents route through the `norn` CLI (`norn new` / `norn set` / `norn edit`)
+so frontmatter is schema-validated at write time — never hand-authored YAML.
+Two invariants every documented command carries: pin the vault with
+`-C "$ATLAS_PATH"` (norn resolves from `$NORN_ROOT`/cwd, never `ATLAS_PATH`),
+and pass `--yes` (non-TTY runs are implicit dry-runs without it). Reads at
+session start stay zero-dep: `build_primer.py` never requires norn.
+
 ## Testing
 
 - **No external deps.** Tests use the stdlib `unittest` runner — there is **no

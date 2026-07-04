@@ -1,13 +1,3 @@
----
-title: {{WORKSPACE}}
-description: {{ELEVATOR_PITCH}}
-type: note
-kind: workspace
-workspace: {{WORKSPACE}}
-created: {{DATE}}
-modified: {{DATE}}
----
-
 # {{WORKSPACE}}
 
 {{ELEVATOR_PITCH}}

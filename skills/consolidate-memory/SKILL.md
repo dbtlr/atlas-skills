@@ -58,11 +58,12 @@ If any dependency is missing, **stop and tell the user** — never fall back to
 hand-scanning `artifacts/session-logs/` or eyeballing weights.
 
 > **Pin the vault on every norn call: `norn -C "$ATLAS_PATH" …`.** norn resolves its
-> vault from the current directory's `.norn/config.yaml` (or `-C`/`--config`) — it does
-> **not** read `ATLAS_PATH` (that is atlas-skills' own variable; "atlas" is just this
-> vault's name). A bare `norn` run from some other cwd will silently operate on a
-> different vault — or a stray `.norn` — and corrupt the wrong place. Always pass
-> `-C "$ATLAS_PATH"`, including in every sub-agent you dispatch that touches norn.
+> vault from `$NORN_ROOT`, else the current directory's `.norn/config.yaml` (or
+> `-C`/`--config`) — it does **not** read `ATLAS_PATH` (that is atlas-skills' own
+> variable; "atlas" is just this vault's name). A bare `norn` run from some other cwd
+> will silently operate on a different vault — or a stray `.norn` — and corrupt the
+> wrong place. Always pass `-C "$ATLAS_PATH"`, including in every sub-agent you
+> dispatch that touches norn.
 
 ## 1. Find the batch
 
