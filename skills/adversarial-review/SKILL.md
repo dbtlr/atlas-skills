@@ -130,6 +130,7 @@ Adversarial-Review: skipped reason=<docs-only|comments-only|formatting-only>
 - `findings` counts survivors reaching resolution (engine findings + suppression hits); `fixed + dismissed + deferred = findings`.
 - Every deferral names its task id in the parens — that's the audit trail.
 - The trailer rides the commit that closes the review: the fix commit when there is one, otherwise an empty record commit (`git commit --allow-empty`). Never amend pushed commits. Multiple trailers on a branch are fine (amended reviews append); **the latest wins**.
+- **Commit the trailer before — not alongside — the PR-create call.** The enforcement hook checks committed state before any part of a proposed command runs, so fusing `git commit` (trailer) `&& gh pr create` into one call self-blocks: the trailer is still just text at inspection time.
 
 **The disposition table** — human-readable, delivered in chat *and* in the PR body:
 
