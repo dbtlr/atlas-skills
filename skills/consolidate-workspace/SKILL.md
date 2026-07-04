@@ -98,7 +98,7 @@ Stamp that number into the Brief's frontmatter with norn — schema-aware, atomi
 norn -C "$ATLAS_PATH" set "Workspaces/<workspace>/<workspace>.md" --field-json brief_baseline=<chars> --yes
 ```
 
-(An `unknown field: brief_baseline` warning is expected and benign — the field is agent-maintained, not in the vault schema.) Don't otherwise rewrite the human-authored manifest. `build_primer.py` reads this baseline and, on each session start, soft-recommends re-running consolidation once the Brief grows past `brief_baseline × 1.2` — a non-blocking banner atop the primer. This is the **only** place the baseline is refreshed, so keep it current with every groom; the small delta from adding the stamp line itself is absorbed by the 20% margin. A Brief with no `brief_baseline` reads as never-consolidated and the primer recommends an initial pass, which seeds it here.
+(An `unknown field: brief_baseline` warning is expected and benign — the field is agent-maintained, not in the vault schema.) Don't otherwise rewrite the human-authored manifest. `build_primer.py` reads this baseline and, on each session start, soft-recommends re-running consolidation once the Brief grows past `brief_baseline × 1.75` — a non-blocking banner atop the primer. This is the **only** place the baseline is refreshed, so keep it current with every groom; the small delta from adding the stamp line itself is absorbed by the 75% margin. A Brief with no `brief_baseline` reads as never-consolidated and the primer recommends an initial pass, which seeds it here.
 
 ## 4. Record the run
 

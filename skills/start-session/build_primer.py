@@ -42,7 +42,7 @@ MIMIR_FILENAME = ".mimir.toml"
 # per-workspace target itself lives in the Brief frontmatter (`brief_baseline`,
 # stamped by consolidate-workspace), so it scales with each project's durable
 # complexity and the two budgets cannot drift.
-BRIEF_BLOAT_MARGIN = 1.2
+BRIEF_BLOAT_MARGIN = 1.75
 
 # The value must be a clean integer that is the *whole* scalar — optionally
 # quoted (open/close must match), with only trailing space or a `# comment`

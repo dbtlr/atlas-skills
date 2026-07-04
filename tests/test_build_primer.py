@@ -56,7 +56,7 @@ class BuildPrimerTest(unittest.TestCase):
         write(ws / "shared" / "memory.md", "# Memory\nshared-memory-body")
         if brief is None:
             # A consolidated Brief: a generous baseline so the current size sits
-            # well under baseline × 1.2 and no hygiene banner fires.
+            # well under baseline × BRIEF_BLOAT_MARGIN and no hygiene banner fires.
             brief = (
                 "---\ntitle: Brief\nbrief_baseline: 100000\n---\n"
                 "# Brief\nworkspace-brief-body"
@@ -127,6 +127,26 @@ class BuildPrimerTest(unittest.TestCase):
         self.assertIn("user-profile-body", out)
         self.assertIn("shared-memory-body", out)
         self.assertIn("brief-body", out)
+
+    def test_banner_fires_exactly_past_the_margin(self):
+        # Pins BRIEF_BLOAT_MARGIN itself: a Brief at exactly baseline × margin
+        # is quiet; one code point past it banners. Sizes are exact code-point
+        # counts of the whole file, matching the primer's len() measurement.
+        baseline = 400
+        threshold = int(baseline * build_primer.BRIEF_BLOAT_MARGIN)
+        header = f"---\nbrief_baseline: {baseline}\n---\n# Brief\n"
+        for total, expect_banner in ((threshold, False), (threshold + 1, True)):
+            with self.subTest(total=total):
+                brief = header + "x" * (total - len(header))
+                self.assertEqual(len(brief), total)
+                self.write_binding()
+                self.write_active_context(brief=brief)
+                rc, out, err = self.run_main()
+                self.assertEqual(rc, 0, err)
+                if expect_banner:
+                    self.assertIn("Primer hygiene", out)
+                else:
+                    self.assertNotIn("Primer hygiene", out)
 
     def test_banner_recommends_initial_consolidation_when_no_baseline(self):
         self.write_binding()
