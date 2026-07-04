@@ -106,3 +106,16 @@ validate:
         workspace: "[[{{path.workspace}}]]"
         created: "{{now}}"
         modified: "{{now}}"
+
+    # Pre-fills decision (ADR) frontmatter for `norn new` under a workspace
+    # decisions/ folder (used by domain-modeling and shaping's on-commit ADR).
+    # Defaults-only; title + description stay operator-supplied.
+    - name: decision-folder-defaults
+      match:
+        path: "Workspaces/{{workspace}}/decisions/**/*.md"
+      frontmatter_defaults:
+        type: note
+        kind: decision
+        workspace: "[[{{path.workspace}}]]"
+        created: "{{now}}"
+        modified: "{{now}}"
