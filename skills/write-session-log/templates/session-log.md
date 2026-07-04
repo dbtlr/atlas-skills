@@ -1,5 +1,3 @@
-<!-- Body outline only — frontmatter is created by `norn new` (see SKILL.md "Create it with norn"). -->
-
 # {{TIMESTAMP}} — {{SESSION_TITLE}}
 
 ## Overview

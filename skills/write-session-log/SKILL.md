@@ -41,22 +41,23 @@ The heart is **Consolidation Candidates** — *"what happened that, had I known 
 
 ## Create it with norn
 
-The log lives at `artifacts/session-logs/<YYYY-MM-DD-HHMM>-<slug>.md` — vault-root `artifacts/`, **never inside the workspace**. Use an accurate timestamp (`date "+%Y-%m-%d %H:%M"`) — never invent one. Write the composed body to a temp file, then create the log in one call — **pin the vault with `-C "$ATLAS_PATH"`** (norn resolves its vault from `$NORN_ROOT`/cwd, never from `ATLAS_PATH`; run from a repo cwd, a bare call hits the wrong place):
+The log lives at `artifacts/session-logs/<YYYY-MM-DD-HHMM>-<slug>.md` — vault-root `artifacts/`, **never inside the workspace**. Take real timestamps — never invent one — in the two shapes needed: `STAMP=$(date +%Y-%m-%d-%H%M)` for the filename, `NOW=$(date +%Y-%m-%dT%H:%M)` for the frontmatter fields. Write the composed body to a temp file, then create the log in one call — **pin the vault with `-C "$ATLAS_PATH"`** (norn resolves its vault from `$NORN_ROOT`/cwd, never from `ATLAS_PATH`; run from a repo cwd, a bare call hits the wrong place):
 
 ```bash
-norn -C "$ATLAS_PATH" new "artifacts/session-logs/<YYYY-MM-DD-HHMM>-<slug>.md" \
+BODY=$(mktemp)   # the composed log body, from the template outline
+norn -C "$ATLAS_PATH" new "artifacts/session-logs/${STAMP}-<slug>.md" \
   --field title="<session title>" \
   --field description="<one-line summary>" \
-  --field type=session-log --field-json kind=null \
+  --field type=session-log \
   --field workspace=<workspace> \
-  --field created="<YYYY-MM-DDTHH:MM>" --field modified="<YYYY-MM-DDTHH:MM>" \
+  --field created="$NOW" --field modified="$NOW" \
   --field-json workspace_consolidated=false --field-json memory_consolidated=false \
-  --body-from-stdin --yes < <body temp file>
+  --body-from-stdin --yes < "$BODY"
 ```
 
-`--yes` is load-bearing: without it a non-TTY run is an implicit dry-run and **nothing is written**. norn validates the new doc on write — treat any warning it emits as a finding to fix now, not noise.
+`--yes` is load-bearing: without it a non-TTY run is an implicit dry-run and **nothing is written**. norn validates the new doc on write — a warning **on the log it just wrote** means the log is malformed: fix it before moving on.
 
-The two consolidation-state flags start `false` and **stay false here**: they're the cursor `consolidate-workspace` / `consolidate-memory` scan on (`norn find`) and flip (`norn set`) once each has lifted this log's candidates.
+The two consolidation-state flags start `false` and **stay false here**: they're the cursor `consolidate-workspace` / `consolidate-memory` scan on (`norn -C "$ATLAS_PATH" find`) and flip (`norn -C "$ATLAS_PATH" set`) once each has lifted this log's candidates.
 
 ## After writing
 

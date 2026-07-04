@@ -9,8 +9,12 @@ files:
     - ".trash/**"
 
 validate:
+  ignore:
+    # Transient specs/plans carry no frontmatter by design (deleted on merge).
+    - "artifacts/scratch/**"
   rules:
-    # Every document declares its type.
+    # Every document declares its type. The enum is the vault doctrine's full
+    # set — a floor config must never mark legitimate vault documents invalid.
     - name: document-type
       match:
         path: "**/*.md"
@@ -19,6 +23,9 @@ validate:
       allowed_values:
         type:
           - note
+          - task
+          - agent-artifact
+          - index
           - session-log
           - observations
           - user-profile
