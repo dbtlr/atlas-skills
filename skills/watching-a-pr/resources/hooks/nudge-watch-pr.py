@@ -18,60 +18,28 @@ nothing otherwise. **Fail-open, unconditionally** — the whole body is guarded 
 payload shape can make the hook crash the tool call. Stdlib only.
 """
 import json
-import shlex
+import re
 import sys
 
-SHELL_SEPARATORS = {"&&", "||", "|", ";", "&", "(", ")", "{", "}", "\n"}
 # a PR URL in the command output — any GitHub host (github.com or Enterprise):
 #   https://<host>/<owner>/<repo>/pull/<N>
-import re
 PR_URL = re.compile(r"https://[^\s/]+/[^\s/]+/[^\s/]+/pull/(\d+)")
 
-
-def _segments(command):
-    """Operator-separated segments of shell tokens; quoting respected."""
-    try:
-        tokens = shlex.split(command, comments=False)
-    except ValueError:
-        return []
-    segs, cur = [], []
-    for tok in tokens:
-        if tok in SHELL_SEPARATORS:
-            if cur:
-                segs.append(cur)
-                cur = []
-        else:
-            cur.append(tok)
-    if cur:
-        segs.append(cur)
-    return segs
-
-
-def command_name(seg):
-    """Invoked binary's basename, skipping leading `VAR=val` env assignments."""
-    i = 0
-    while i < len(seg) and "=" in seg[i] and not seg[i].startswith("-") \
-            and "/" not in seg[i].split("=", 1)[0]:
-        i += 1
-    if i >= len(seg):
-        return None, []
-    return seg[i].rsplit("/", 1)[-1], seg[i + 1:]
+# Loose, non-tokenizing signal that a command CREATES a PR: `gh … pr … create`
+# or `gh … api …/pulls`. Deliberately imprecise — the authoritative signal is a
+# /pull/N URL in the command *output* (see main), which proves a PR was really
+# created; this only separates a create from a read (`gh pr view/list/checks`)
+# so the nudge stays quiet on inspection commands. It never tokenizes, so an
+# unbalanced quote in a heredoc PR body can't defeat it — the exact failure that
+# silently disabled the old shlex-based detector (ATSK-47).
+_GH_PR_CREATE = re.compile(r"\bgh\b.*?\bpr\b.*?\bcreate\b", re.S)
+_GH_API_PULLS = re.compile(r"\bgh\b.*?\bapi\b.*?/pulls\b", re.S)
 
 
 def creates_pr(command):
-    """True if any segment creates a PR: `gh … pr … create` or `gh api …/pulls`.
-
-    Kept in parity with check-adversarial-review.py's detection (the two hooks share
-    this shell-parsing shape by convention, not a cross-skill import)."""
-    for seg in _segments(command):
-        name, args = command_name(seg)
-        if name != "gh" or "--help" in args or "-h" in args:
-            continue
-        if "pr" in args and "create" in args:
-            return True
-        if "api" in args and any("/pulls" in a for a in args):
-            return True
-    return False
+    """True if the command looks like it creates a PR — see the regex note above.
+    Loose by design: precision comes from the output-URL gate in main(), not here."""
+    return bool(_GH_PR_CREATE.search(command) or _GH_API_PULLS.search(command))
 
 
 def output_text(payload):
