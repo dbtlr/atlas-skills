@@ -26,12 +26,17 @@ import sys
 PR_URL = re.compile(r"https://[^\s/]+/[^\s/]+/[^\s/]+/pull/(\d+)")
 
 # Loose, non-tokenizing signal that a command CREATES a PR: `gh … pr … create`
-# or `gh … api …/pulls`. Deliberately imprecise — the authoritative signal is a
-# /pull/N URL in the command *output* (see main), which proves a PR was really
-# created; this only separates a create from a read (`gh pr view/list/checks`)
-# so the nudge stays quiet on inspection commands. It never tokenizes, so an
-# unbalanced quote in a heredoc PR body can't defeat it — the exact failure that
-# silently disabled the old shlex-based detector (ATSK-47).
+# or `gh … api …/pulls`. It never tokenizes, so an unbalanced quote in a heredoc
+# PR body can't defeat it — the exact failure that silently disabled the old
+# shlex-based detector (ATSK-47). Precision comes from pairing it with a /pull/N
+# URL in the command *output* (see main). That pair is a strong heuristic, not a
+# proof: a URL in output confirms a PR *exists*, not that this command made it,
+# so a non-create that both mentions "create" and prints a pull URL (a `gh pr
+# comment --body "…create…"`, a `gh api …/pulls` read) can still nudge. That
+# residual false-positive is accepted — a cheap advisory nudge on a PR that
+# exists (usually one already being watched) — because the only way to be
+# precise is to tokenize, the fragility we removed. Optimize against the
+# expensive error (missing a real create), not the cheap one.
 _GH_PR_CREATE = re.compile(r"\bgh\b.*?\bpr\b.*?\bcreate\b", re.S)
 _GH_API_PULLS = re.compile(r"\bgh\b.*?\bapi\b.*?/pulls\b", re.S)
 

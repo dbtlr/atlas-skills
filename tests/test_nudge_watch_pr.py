@@ -122,6 +122,15 @@ class EndToEndTest(unittest.TestCase):
                                "tool_input": {"command": "git commit -m 'ran gh pr create'"},
                                "tool_output": "a1b2c3d fix: thing"}))
 
+    def test_silent_on_help_invocation(self):
+        # `gh pr create --help` matches the loose detector, but help prints no
+        # /pull/N URL, so the output gate keeps it silent. Locks the invariant
+        # the old --help exclusion carried, without a --help arg-exclusion (which
+        # would risk a false-negative on a real create whose --body says --help).
+        self.assertIsNone(run({"tool_name": "Bash",
+                               "tool_input": {"command": "gh pr create --help"},
+                               "tool_output": "Create a pull request on GitHub.\n\nUSAGE\n  gh pr create [flags]"}))
+
     def test_fail_open_on_wrong_field_and_odd_payloads(self):
         # the exact bug this file exists to catch: output under a wrong/absent field
         self.assertIsNone(run({"tool_name": "Bash",
