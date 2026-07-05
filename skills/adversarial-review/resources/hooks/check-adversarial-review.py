@@ -8,21 +8,36 @@ trailer -> exit 2 (block, stderr fed back to the model). Everything else -> exit
 
 This is a **speed bump for the forgotten gate, not a security boundary.** It catches
 the ordinary case — an agent about to `gh pr create` without having run the review —
-by parsing the command into shell segments and matching `gh` invocations by their
-subcommand tokens (so a commit message that merely mentions the phrase is not a PR,
-and flags interleaved among `pr … create` still match). It does NOT stop an agent
-determined to evade it (a `gh` alias, `gh api …/pulls`, or another tool can create a
-PR through a path this can't see). That's acceptable: the skill fights rationalized
-skipping, and a human still sees every PR. Stdlib only; fail-open on every ambiguity.
+by stripping heredoc bodies, parsing the command into shell segments, and matching `gh`
+invocations by their subcommand tokens (so a commit message that merely mentions the
+phrase is not a PR, and flags interleaved among `pr … create` still match). A command
+unparseable even after heredoc-stripping fails **closed** when it still looks like a PR
+create (a PR-guard guards on doubt) and open otherwise. It does NOT stop an agent
+determined to evade it (a `gh` alias or another tool can create a PR through a path this
+can't see). That's acceptable: the skill fights rationalized skipping, and a human still
+sees every PR. Stdlib only.
 """
 
 import json
+import re
 import shlex
 import subprocess
 import sys
 
 SHELL_SEPARATORS = {"&&", "||", "|", ";", "&", "(", ")", "{", "}", "\n"}
 TRAILER = "Adversarial-Review:"
+
+# Opens a heredoc: `<<WORD`, `<<-WORD`, `<< 'WORD'`, `<<"WORD"`. The body that
+# follows (arbitrary data — unbalanced quotes, shell operators) is what defeats
+# shlex; strip_heredocs drops it so the surrounding command still tokenizes.
+_HEREDOC_OPEN = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_]\w*)\1")
+
+# Loose, non-tokenizing PR-create signal — the fail-closed backstop when a command
+# is unparseable even after stripping heredocs. Deliberately imprecise (same shape
+# as the nudge hook's detector): a PR-guard fails toward guarding, so on an
+# unparseable command that still looks like a create we block rather than wave through.
+_PR_CREATE_SIGNAL = re.compile(r"\bgh\b.*?\bpr\b.*?\bcreate\b", re.S)
+_API_PULLS_SIGNAL = re.compile(r"\bgh\b.*?\bapi\b.*?/pulls\b", re.S)
 
 
 def sh(args, cwd):
@@ -33,13 +48,51 @@ def sh(args, cwd):
         return None
 
 
+def strip_heredocs(command):
+    """Best-effort removal of heredoc bodies so the surrounding shell tokenizes.
+
+    A `gh pr create --body` written via `cat > f <<'EOF' … EOF` carries a body of
+    arbitrary text — apostrophes, quotes, `&&` — that makes shlex.split raise, which
+    used to fail-open the whole gate. The body is data, not shell: drop each heredoc's
+    body and its terminator line, keep the command structure. Best-effort — a form
+    this misses (nested, multiple-per-line) just falls through to the fail-closed
+    backstop in main(), never to a silent bypass."""
+    lines = command.split("\n")
+    out, i = [], 0
+    while i < len(lines):
+        out.append(lines[i])
+        m = _HEREDOC_OPEN.search(lines[i])
+        i += 1
+        if m:
+            delim = m.group(2)
+            while i < len(lines) and lines[i].strip() != delim:
+                i += 1
+            if i < len(lines):  # drop the terminator line itself
+                i += 1
+    return "\n".join(out)
+
+
+def looks_like_pr_create(command):
+    """Loose, tokenizer-free check that a command creates a PR — the fail-closed
+    signal for an unparseable command (see the regex note near the top)."""
+    return bool(_PR_CREATE_SIGNAL.search(command) or _API_PULLS_SIGNAL.search(command))
+
+
 def segments(command):
     """Split a shell command into operator-separated segments of tokens.
 
-    Quoting is respected, so `gh pr create` inside a `-m "…"` argument stays one
-    token and never reads as a PR-creating segment. Unparseable -> None (fail open)."""
+    Heredoc bodies are stripped first (data, not shell), then quoting is respected —
+    so `gh pr create` inside a `-m "…"` argument stays one token and never reads as a
+    PR-creating segment. Unparseable even after stripping -> None; the caller then
+    fails closed if the raw command still looks like a PR create.
+
+    Newlines are translated to `;` before tokenizing so a `gh pr create` on its own
+    line after a `cat … <<EOF` is its own segment (shlex.split otherwise folds a raw
+    newline into surrounding whitespace, hiding the `gh` command behind the first
+    line's `cat`). A newline *inside* a quoted argument stays in the token — shlex
+    respects the quotes — so a multi-line inline `--body` is not split apart."""
     try:
-        tokens = shlex.split(command, comments=False)
+        tokens = shlex.split(strip_heredocs(command).replace("\n", " ; "), comments=False)
     except ValueError:
         return None
     segs, cur = [], []
@@ -129,6 +182,17 @@ def main():
 
     segs = segments(command)
     if segs is None:
+        # Unparseable even after stripping heredoc bodies. A PR-guard fails toward
+        # guarding: if the command still looks like a PR create we can't verify, block;
+        # if there's no PR signal at all, it isn't ours to judge — allow.
+        if looks_like_pr_create(command):
+            sys.stderr.write(
+                "BLOCKED by the adversarial-review gate: could not parse this command "
+                "to verify the Adversarial-Review trailer, and it looks like it creates "
+                "a PR. Simplify the command — e.g. write the PR body with `--body-file` "
+                "instead of an inline heredoc — or confirm the trailer is committed, "
+                "then retry.\n")
+            return 2
         return 0
     base_req, creates = None, False
     for seg in segs:
