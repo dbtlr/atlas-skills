@@ -69,6 +69,8 @@ If `log` was given, invoke **write-session-log** now, while the report is still 
 
 Summarize the ritual: PR verified merged (link), Mimir task closed, branch/worktree deleted, main synced (what came in), anything stashed and popped, and whether the Session Log was written.
 
+The Report is the terminal act of a **standalone** `/merged`. When `merged` runs **inside** `watching-a-pr`'s merge terminal, the Report is a checkpoint the composing flow passes through, not a stop: hand control back to `watching-a-pr` to reconcile stragglers and stop watching in the same turn — don't treat the Report as the end of the turn.
+
 ### 9. Pick up the next task — `next`
 
 If `next` was given, find the next task after the report is out. In a Mimir-tracked repo (`.mimir.toml`), consult `mimir next`; one clear top task → start it. When the choice isn't obvious — several candidates, or no queue — present the options with enough detail to pick: what each task is, roughly its size, and which is recommended and why.

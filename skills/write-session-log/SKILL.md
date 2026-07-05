@@ -63,3 +63,5 @@ The two consolidation-state flags start `false` and **stay false here**: they're
 
 - Update the Workspace Brief's session-state sections (Current State, What's Next, Open Questions, Learnings, Recent Sessions) — **below the rule only**; never touch the durable manifest above it.
 - The Session Log is frozen; durable truth is lifted out of it later — durable knowledge + follow-ups by **consolidate-workspace**, user observations by **consolidate-memory**.
+
+Freezing the log is the terminal act of a **standalone** memorialization (the `end` alias, or a direct "write a session log" request). When write-session-log runs **inside** `merged` (its `log` arg), the frozen log is a checkpoint the composing flow passes through, not a stop: after the Brief update, return control to `merged` and continue its Report and `next` steps in the same turn — don't treat the frozen log as the end of the turn.
