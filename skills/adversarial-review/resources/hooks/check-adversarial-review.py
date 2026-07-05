@@ -24,7 +24,7 @@ import shlex
 import subprocess
 import sys
 
-SHELL_SEPARATORS = {"&&", "||", "|", ";", "&", "(", ")", "{", "}", "\n"}
+SHELL_SEPARATORS = {"&&", "||", "|", ";", "&", "(", ")", "{", "}"}
 TRAILER = "Adversarial-Review:"
 
 # Opens a heredoc: `<<WORD`, `<<-WORD`, `<< 'WORD'`, `<<"WORD"`. The body that
@@ -33,9 +33,10 @@ TRAILER = "Adversarial-Review:"
 _HEREDOC_OPEN = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_]\w*)\1")
 
 # Loose, non-tokenizing PR-create signal — the fail-closed backstop when a command
-# is unparseable even after stripping heredocs. Deliberately imprecise (same shape
-# as the nudge hook's detector): a PR-guard fails toward guarding, so on an
-# unparseable command that still looks like a create we block rather than wave through.
+# is unparseable even after stripping heredocs. Deliberately imprecise (currently
+# mirrors the nudge hook's detector, though the two hooks are intentionally separate):
+# a PR-guard fails toward guarding, so on an unparseable command that still looks like
+# a create we block rather than wave through.
 _PR_CREATE_SIGNAL = re.compile(r"\bgh\b.*?\bpr\b.*?\bcreate\b", re.S)
 _API_PULLS_SIGNAL = re.compile(r"\bgh\b.*?\bapi\b.*?/pulls\b", re.S)
 
@@ -54,9 +55,11 @@ def strip_heredocs(command):
     A `gh pr create --body` written via `cat > f <<'EOF' … EOF` carries a body of
     arbitrary text — apostrophes, quotes, `&&` — that makes shlex.split raise, which
     used to fail-open the whole gate. The body is data, not shell: drop each heredoc's
-    body and its terminator line, keep the command structure. Best-effort — a form
-    this misses (nested, multiple-per-line) just falls through to the fail-closed
-    backstop in main(), never to a silent bypass."""
+    body and its terminator line, keep the command structure. A body is stripped only
+    when its terminator line is actually found, so a `<<word` lookalike inside a quoted
+    string never swallows a real following command; forms this still mishandles
+    (nested, multiple-per-line) leave unbalanced quotes that fail shlex and hit the
+    fail-closed backstop — never a silent bypass."""
     lines = command.split("\n")
     out, i = [], 0
     while i < len(lines):
@@ -65,10 +68,18 @@ def strip_heredocs(command):
         i += 1
         if m:
             delim = m.group(2)
-            while i < len(lines) and lines[i].strip() != delim:
-                i += 1
-            if i < len(lines):  # drop the terminator line itself
-                i += 1
+            # Only strip a body when a matching terminator line actually exists. A
+            # `<<word` lookalike inside a quoted string or commit message has no real
+            # terminator; consuming to EOF there would silently swallow a following
+            # `gh pr create` (which then parses gh-free and never reaches the fail-
+            # closed backstop). Leaving the lines intact keeps that command visible —
+            # it parses and is gated, or its unbalanced quotes fail shlex and hit the
+            # backstop. Never a silent bypass.
+            j = i
+            while j < len(lines) and lines[j].strip() != delim:
+                j += 1
+            if j < len(lines):        # terminator found -> drop body + terminator line
+                i = j + 1
     return "\n".join(out)
 
 
@@ -89,8 +100,9 @@ def segments(command):
     Newlines are translated to `;` before tokenizing so a `gh pr create` on its own
     line after a `cat … <<EOF` is its own segment (shlex.split otherwise folds a raw
     newline into surrounding whitespace, hiding the `gh` command behind the first
-    line's `cat`). A newline *inside* a quoted argument stays in the token — shlex
-    respects the quotes — so a multi-line inline `--body` is not split apart."""
+    line's `cat`). A newline *inside* a quoted argument becomes ` ; ` within that
+    still-single quoted token — the quotes are balanced, so it stays one token — so a
+    multi-line inline `--body` is not split into separate commands."""
     try:
         tokens = shlex.split(strip_heredocs(command).replace("\n", " ; "), comments=False)
     except ValueError:

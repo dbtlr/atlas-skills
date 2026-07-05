@@ -91,6 +91,51 @@ class GateEndToEnd(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(run("git status", make_repo(tmp, "feat: x"))[0], 0)
 
+    def test_blocks_create_after_heredoc_lookalike_in_earlier_line(self):
+        # Bypass regression: a `<<WORD` inside a quoted string on an earlier line is
+        # not a real heredoc (no terminator). strip_heredocs must NOT swallow the
+        # following real `gh pr create`, or it slips past the gate parseable-but-
+        # gh-stripped, never reaching the fail-closed backstop.
+        cmd = 'git commit -m "document the <<HEREDOC pattern"\ngh pr create --title x'
+        with tempfile.TemporaryDirectory() as tmp:
+            code, err = run(cmd, make_repo(tmp, "feat: x"))
+            self.assertEqual(code, 2)
+            self.assertIn("BLOCKED", err)
+
+    def test_blocks_newline_separated_create(self):
+        # the newline->';' segmentation: a create on its own line after another
+        # command must not hide behind the first line's binary.
+        with tempfile.TemporaryDirectory() as tmp:
+            code, _ = run("cd sub\ngh pr create --title x", make_repo(tmp, "feat: x"))
+            self.assertEqual(code, 2)
+
+    def test_blocks_indented_heredoc_create_without_trailer(self):
+        cmd = ("cat > /tmp/b.md <<-EOF\n\t## Body with section's tail\n\tEOF\n"
+               "gh pr create --title x --body-file /tmp/b.md")
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(run(cmd, make_repo(tmp, "feat: x"))[0], 2)
+
+    def test_blocks_create_after_two_sequential_heredocs(self):
+        cmd = ("cat > a <<'A'\nbody a's text\nA\n"
+               "cat > b <<'B'\nbody b's text\nB\n"
+               "gh pr create --title x")
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(run(cmd, make_repo(tmp, "feat: x"))[0], 2)
+
+    def test_blocks_api_pulls_create_without_trailer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, _ = run("gh api repos/o/r/pulls -f title=x -f head=h -f base=main",
+                          make_repo(tmp, "feat: x"))
+            self.assertEqual(code, 2)
+
+    def test_non_bash_tool_is_allowed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = {"tool_name": "Read", "tool_input": {"command": "gh pr create"},
+                       "cwd": make_repo(tmp, "feat: x")}
+            p = subprocess.run([sys.executable, str(HOOK)], input=json.dumps(payload),
+                               capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0)
+
     def test_fail_closed_on_unparseable_pr_signal(self):
         # unbalanced quote NOT from a heredoc -> shlex still fails after stripping;
         # it looks like a PR create we can't verify -> block (fail toward guarding).
@@ -104,8 +149,7 @@ class GateEndToEnd(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(run("echo 'unterminated", make_repo(tmp, "feat: x"))[0], 0)
 
-    def test_non_bash_and_bad_payload_are_silent(self):
-        self.assertEqual(run("gh pr create") and True, True)  # smoke: no crash
+    def test_bad_payload_is_silent(self):
         p = subprocess.run([sys.executable, str(HOOK)], input="not json",
                            capture_output=True, text=True)
         self.assertEqual(p.returncode, 0)
