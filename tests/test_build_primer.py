@@ -80,6 +80,14 @@ class BuildPrimerTest(unittest.TestCase):
         self.assertIn("shared-memory-body", out)
         self.assertIn("workspace-brief-body", out)
 
+    def test_skill_resolves_primer_relative_to_loaded_skill(self):
+        skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn('python3 "<path-to-skill>/build_primer.py"', skill)
+        self.assertIn("relative to this skill directory", skill)
+        self.assertNotIn("$HOME/.claude/skills/start-session", skill)
+        self.assertNotIn("$HOME/.agents/skills/start-session", skill)
+        self.assertNotIn('"skills/start-session/build_primer.py"', skill)
+
     def test_uninitialized_when_no_binding(self):
         rc, out, _ = self.run_main()
         self.assertEqual(rc, 0)

@@ -29,13 +29,13 @@ Building the Session Primer first is not optional. The one exception is the quie
 
 ## 1. Build the Session Primer
 
-Run the primer-merge script that ships **inside this skill** — the path resolves whether the skills are installed globally (`~/.claude/skills/`, `~/.agents/skills/`) or run in-repo:
+Run the bundled `build_primer.py` **relative to this skill directory** — the directory containing the `SKILL.md` you just loaded:
 
 ```bash
-python3 "$(ls "$HOME/.claude/skills/start-session/build_primer.py" \
-              "$HOME/.agents/skills/start-session/build_primer.py" \
-              "skills/start-session/build_primer.py" 2>/dev/null | head -n1)"
+python3 "<path-to-skill>/build_primer.py"
 ```
+
+The script path must be the sibling of the currently loaded `SKILL.md`; do not search known install roots or fall back to another copy. Keep `python3` unqualified so the active shell `PATH` selects the interpreter.
 
 - If it prints `ATLAS_UNINITIALIZED: …`, this project has no Project Binding (`.atlas.toml`) — it isn't an atlas workspace. **Stop silently and proceed with the user's request normally; do not mention atlas or pitch initialization.** This skill triggers on *any* session (the trigger lives in the skill, not in a per-project file), so an unbound project is the common, expected case — exit quietly. Only route to **initialize-atlas** if the user is explicitly setting up atlas (e.g. "initialize my workspace", "bind this repo to a vault").
 - If it reports `ATLAS_PATH is not set`, the vault location is unknown — ask the user to `export ATLAS_PATH=<their atlas vault root>` (it always points at the atlas vault), then re-run.
