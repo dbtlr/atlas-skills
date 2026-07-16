@@ -51,15 +51,19 @@ the repo has a `.mimir.toml` and `mimir` is on PATH. Prints
 
 ## Editing skills
 
-Skills live in `skills/` — one real directory. The ten: `start-session`,
+Skills live in `skills/` — one real directory. The eight: `start-session`,
 `initialize-atlas`, `write-session-log`, `consolidate-workspace`,
-`consolidate-memory`, `merged`, `finishing-a-task`, `adversarial-review`,
-`watching-a-pr`, `shaping` — plus two alias wrappers, `start` → `start-session` and
-`end` → `write-session-log`. Each keeps whatever `resources/`, `references/`,
-and `templates/` it needs co-located inside it, so the
-skill is self-contained wherever it's installed. They're discovered by Claude
-Code and Codex, and installed cross-harness by the `skills` CLI
-(`npx skills add …`) into `~/.agents/skills/`.
+`consolidate-memory`, `merged`, `watching-a-pr`, `shaping` — plus two alias
+wrappers, `start` → `start-session` and `end` → `write-session-log`. Each keeps
+whatever `resources/`, `references/`, and `templates/` it needs co-located
+inside it, so the skill is self-contained wherever it's installed. They're
+discovered by Claude Code and Codex, and installed cross-harness by the
+`skills` CLI (`npx skills add …`) into `~/.agents/skills/`.
+
+Parked skills live in top-level `pre-release/` — outside `skills/` because the
+`skills` CLI discovers `SKILL.md` recursively under that tree, so anything
+inside it would still be installed by `npx skills add --all`. See
+[pre-release/README.md](pre-release/README.md).
 
 ## Keeping installed skills live
 

@@ -1,6 +1,6 @@
 ---
 name: watching-a-pr
-description: "Watch an open GitHub PR and drive it to done — arm the background PR watcher, then on each wake route the batch it returns (address human review comments, fix red CI, announce green) and re-arm, until the PR merges (run the merged cleanup + reconcile stragglers) or the watch times out. Invoked directly with a PR number, or by the finishing-a-task workflow / the post-github-tool-call nudge when those are present. Primary agent / controller only."
+description: "Watch an open GitHub PR and drive it to done — arm the background PR watcher, then on each wake route the batch it returns (address human review comments, fix red CI, announce green) and re-arm, until the PR merges (run the merged cleanup + reconcile stragglers) or the watch times out. Invoked directly with a PR number, or by the post-github-tool-call nudge when it is present. Primary agent / controller only."
 ---
 
 # watching-a-pr
@@ -18,7 +18,7 @@ The watcher is a background process. A background process can only re-invoke you
 
 ## 1. Arm the watcher
 
-Resolve the PR number and repo from context — the invoking `finishing-a-task` workflow, the `post-github-tool-call` nudge (when present), the PR you just created, or the user's ask. Then launch the watcher **in the background** and end your turn — let it run detached; the harness re-invokes you when it exits.
+Resolve the PR number and repo from context — the `post-github-tool-call` nudge (when present), the PR you just created, or the user's ask. Then launch the watcher **in the background** and end your turn — let it run detached; the harness re-invokes you when it exits.
 
 **How you arm depends on whether the PR already has activity — get this right or you silently drop pre-existing feedback:**
 
@@ -51,7 +51,7 @@ When the watcher exits, its stdout is `{ "events": [...], "cursor": {...}, "term
 | --- | --- |
 | `review_comment` (has `path`/`line`/`diff_hunk`) | Read the comment against that code location. Address it per the **autonomy boundary** below, then **reply on the PR** with the watermark (§3). |
 | `issue_comment` / `review` | Same — treat as feedback; assess and address or reply. |
-| `gates` `state: RED` (`failing: [...]`) | Inspect the named failing checks, fix the cause, push. A fix that is **mechanical** (lint, formatter, flaky retry) needs no re-review; a fix that **changes logic** re-enters the `adversarial-review` proportionality gate before it counts as done. |
+| `gates` `state: RED` (`failing: [...]`) | Inspect the named failing checks, fix the cause, push. A fix that is **mechanical** (lint, formatter, flaky retry) needs no re-review; a fix that **changes logic** warrants a fresh review (e.g. the harness's native review engine) before it counts as done. |
 | `gates` `state: GREEN` | Tell the user the PR is **ready for their review**, with a 2–3 line summary of what's in it plus any fixes made since it opened. Keep watching. **Unless a `merge` event is also in this batch** (auto-merge settled green and merged in one poll) — then skip this announcement; the merge terminal (§4) supersedes it. |
 | `merge` | Terminal — handle in §4. |
 

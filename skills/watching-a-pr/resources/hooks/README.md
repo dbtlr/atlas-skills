@@ -1,6 +1,6 @@
 # Post-create nudge hook — install
 
-Optional hardening for Claude Code: a `PostToolUse` hook that, after a `gh pr create` succeeds, nudges the agent to arm `watching-a-pr` on the new PR. It's the **backstop** for a PR opened *outside* the `finishing-a-task` flow (which already hands off to the watcher) — it makes sure a directly-created PR still gets watched.
+Optional hardening for Claude Code: a `PostToolUse` hook that, after a `gh pr create` succeeds, nudges the agent to arm `watching-a-pr` on the new PR. It makes sure a directly-created PR gets watched even when no workflow handed it off to the watcher.
 
 It only nudges (injects a `systemMessage`); it can't launch the watcher itself — a hook-spawned process isn't harness-tracked to re-invoke the agent, so only a watcher the agent launches carries that wiring.
 

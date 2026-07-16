@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """PostToolUse hook: after a PR is created, nudge the agent to arm the watcher.
 
-The `finishing-a-task` workflow hands a freshly-opened PR to `watching-a-pr`. This
-hook is the **backstop** for a PR created *outside* that flow — an agent that just
-runs `gh pr create` directly. It fires after a Bash command that creates a PR,
+This hook is the **backstop** for a PR whose creation no workflow handed off to
+`watching-a-pr` — an agent that just runs `gh pr create` directly. It fires after
+a Bash command that creates a PR,
 extracts the PR number from the command's output, and injects a systemMessage telling
 the agent to arm `watching-a-pr`.
 
