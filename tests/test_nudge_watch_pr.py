@@ -1,4 +1,4 @@
-"""Hermetic tests for skills/watching-a-pr/resources/hooks/nudge-watch-pr.py.
+"""Hermetic tests for pre-release/watching-a-pr/resources/hooks/nudge-watch-pr.py.
 
 Pins the PostToolUse contract the hook depends on — the Bash output arrives in
 `tool_output` (a string) — plus PR-creation detection, URL extraction, and the
@@ -13,7 +13,7 @@ import sys
 import unittest
 from pathlib import Path
 
-HOOK = (Path(__file__).resolve().parent.parent / "skills" / "watching-a-pr"
+HOOK = (Path(__file__).resolve().parent.parent / "pre-release" / "watching-a-pr"
         / "resources" / "hooks" / "nudge-watch-pr.py")
 _spec = importlib.util.spec_from_file_location("nudge_watch_pr", HOOK)
 nudge = importlib.util.module_from_spec(_spec)

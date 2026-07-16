@@ -17,5 +17,8 @@ Currently parked:
   Parked as too prescriptive for everyday flow; its enforcement hook and tests
   remain functional.
 - `finishing-a-task` — the "done → merged" orchestrator built around a
-  mandatory `adversarial-review` step. Parked together with it; `watching-a-pr`
-  remains released and can be invoked directly with a PR number.
+  mandatory `adversarial-review` step. Parked together with it.
+- `watching-a-pr` — the PR engagement loop around the background
+  `pr_watcher.py`. Parked because agents kept invoking it from its trigger
+  language alone, even with the skill switched off via `skillOverrides`; its
+  watcher and nudge-hook tests remain functional.
