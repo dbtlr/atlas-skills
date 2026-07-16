@@ -1,4 +1,4 @@
-"""Hermetic tests for skills/adversarial-review/resources/hooks/check-adversarial-review.py.
+"""Hermetic tests for pre-release/adversarial-review/resources/hooks/check-adversarial-review.py.
 
 The pre-PR adversarial-review gate. Each test builds a throwaway git repo (a base
 commit reachable as origin/main, one feature commit ahead) under a temp dir, feeds
@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-HOOK = (Path(__file__).resolve().parent.parent / "skills" / "adversarial-review"
+HOOK = (Path(__file__).resolve().parent.parent / "pre-release" / "adversarial-review"
         / "resources" / "hooks" / "check-adversarial-review.py")
 _spec = importlib.util.spec_from_file_location("check_adversarial_review", HOOK)
 gate = importlib.util.module_from_spec(_spec)

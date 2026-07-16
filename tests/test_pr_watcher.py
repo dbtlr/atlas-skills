@@ -1,4 +1,4 @@
-"""Hermetic tests for skills/watching-a-pr/pr_watcher.py.
+"""Hermetic tests for pre-release/watching-a-pr/pr_watcher.py.
 
 No external deps (stdlib unittest), no real `gh` calls, no real sleeping. The
 watcher's heart is a pure function `compute_batch(state, since) -> (events,
@@ -11,7 +11,7 @@ import sys
 import unittest
 from pathlib import Path
 
-SKILL_DIR = Path(__file__).resolve().parent.parent / "skills" / "watching-a-pr"
+SKILL_DIR = Path(__file__).resolve().parent.parent / "pre-release" / "watching-a-pr"
 sys.path.insert(0, str(SKILL_DIR))
 import pr_watcher  # noqa: E402
 

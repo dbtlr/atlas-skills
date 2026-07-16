@@ -69,7 +69,7 @@ If `log` was given, invoke **write-session-log** now, while the report is still 
 
 Summarize the ritual: PR verified merged (link), Mimir task closed, branch/worktree deleted, main synced (what came in), anything stashed and popped, and whether the Session Log was written.
 
-The Report is the terminal act of a **standalone** `/merged`. When `merged` runs **inside** `watching-a-pr`'s merge terminal, the Report is a checkpoint the composing flow passes through, not a stop: hand control back to `watching-a-pr` to reconcile stragglers and stop watching in the same turn — don't treat the Report as the end of the turn.
+The Report is the terminal act of a **standalone** `/merged`. When `merged` runs **inside** a composing flow (e.g. a PR-watch loop that invokes it on merge), the Report is a checkpoint that flow passes through, not a stop: hand control back to the composing flow to finish its own wrap-up in the same turn — don't treat the Report as the end of the turn.
 
 ### 9. Pick up the next task — `next`
 
